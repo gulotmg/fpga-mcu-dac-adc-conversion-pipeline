@@ -41,10 +41,10 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 - **Phase accumulator / frequency control** — `addr_reg` is incremented by the
   one-hot step `addr_mask` at the end of every serial frame. `SELECT1`
   doubles the step (1→2→…→128→1): output frequency = `f_update · step / 256`,
-  i.e. ≈ 1/2/4/8 kHz — the same frequencies used in the measurement campaign.
+  i.e. ≈ 1/2/4/8 kHz; the same frequencies used in the measurement campaign.
   Step > 1 trades time resolution for frequency (amplitude resolution unchanged).
-- **Waveform select** — 2-bit mode counter: `00` sine, `01` triangle,
-  `11` sawtooth; the unused state safely defaults to sine.
+- **Waveform select** — 2-bit mode counter incremented with 'SELECT2': `00` sine, `01` triangle,
+  `11` sawtooth; the unused state safely defaults to sine. 
 - **DAC7311 serial interface** — 2-state FSM (`WAIT_FOR_SYNC`, `DATA_MOVING`).
   ~3.6 µs inter-frame gap with SYNC high, then SYNC low and 16 bits shifted
   MSB first: `DIN` updated while SCLK high, shifted on SCLK low (DAC latches
