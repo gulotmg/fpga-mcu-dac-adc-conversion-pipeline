@@ -7,18 +7,6 @@ to the LabVIEW host. CPU involvement during sampling is zero: the whole
 acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
 `__WFI()` until the DMA Transfer-Complete interrupt fires.
 
-```
-PA11 (EXTI11, 100 kHz) ──► EXTI11 ──► ADC1 hw trigger (EXTSEL=111, rising)
-PA1  (ADC_IN1, CH1) ────► ADC1 (12-bit, sync clk PCLK/2)
-                              │ one DMA request per conversion (DMAEN, DMACFG=0)
-                              ▼  DMAMUX req 0x05
-                         DMA1_CH1 ──► adc_buffer[1000]
-                              │ TC interrupt
-                              ▼
-                         FSM: INIT → SAMPLING(__WFI) → UART → HALT
-                         USART2_TX (PA2) ──► ST-LINK VCP ──► LabVIEW
-```
-
 ## Modules
 
 | File | Role |
