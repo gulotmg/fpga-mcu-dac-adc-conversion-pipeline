@@ -157,7 +157,9 @@ Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed 
 | 500 | 2 kHz | 50.73 | 32.88 | 45.19 | −46.61 | 7.21 |
 | 1000 | 1 kHz | 54.37 | 33.85 | 46.98 | −47.85 | 7.51 |
 
-Raw data: `data/`. Analysis VI: `labview/`.
+
+
+Image of "Front Panel" for one instance (for demonstration and brevity)
 
 ## Known limitations and interpretation of results
 
