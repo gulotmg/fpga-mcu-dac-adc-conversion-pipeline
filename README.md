@@ -4,12 +4,12 @@ Acquisition pipeline built around an STM32 Nucleo-C031C6 and a Spartan-7
 SEA/FPGA board. The FPGA design is developed in Vivado as fully custom VHDL
 (vendor IP limited to the BRAMs storing the MATLAB-generated .coe waveform
 tables): it drives a TI DAC7311, used at 8-bit code resolution, to generate
-sine, triangle and sawtooth waveforms, and provides a 100 kHz trigger that
-hardware-triggers the STM32 ADC via EXTI line 11. The STM32 firmware is
-written entirely bare-metal at register level — no HAL, only CMSIS device
-macros, developed in STM32CubeIDE: ADC samples are moved by DMA into a
-1000-sample buffer and, when the buffer is full, a firmware state machine
-streams it over UART to a LabVIEW (VISA) host that performs
+sine, triangle and sawtooth waveforms and provides a 100 kHz trigger that
+hardware-triggers the STM32 ADC via EXTI line 11.
+
+The STM32 firmware is written entirely bare-metal at register level (no HAL), developed in STM32CubeIDE: 
+ADC samples are moved by DMA into a 1000-sample buffer and, when the buffer is full, a 
+firmware state machine streams it over UART to a LabVIEW (VISA) host that performs
 coherent-sampling spectral analysis (SNR / SFDR / SINAD / THD / ENOB).
 
 ## System overview
