@@ -5,21 +5,6 @@ RAM and streams samples to a TI DAC7311 over a 3-wire serial interface, while
 outputting a 100 kHz trigger for the STM32 ADC (EXTI11). Vendor IP is used
 only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 
-```
-            ┌────────────────────────────────────────────┐
- CLK 100MHz │  addr_reg (phase accumulator)               │
- RESET ───► │      │ addr_mask (step = 1,2,4…128)         │
- SELECT1 ──►│      ▼                                      │
- (freq ×2)  │  ROM_Sin / ROM_trig / ROM_saw (BRAM, 256×8) │
- SELECT2 ──►│      │ wave_mode MUX                        │
- (waveform) │      ▼                                      │
-            │  16-bit frame packer + serial FSM ─► DAC_DIN│
-            │                              ──────► DAC_CLK│ (50 MHz)
-            │                              ──────► DAC_SYNC│
-            │  100 kHz divider ────────────► INT_PIN      │
-            └────────────────────────────────────────────┘
-```
-
 ## Ports
 
 | Port | Dir | Description |
