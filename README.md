@@ -180,6 +180,8 @@ Raw data: `data/`. Analysis VI: `labview/`.
 - STM32C031 datasheet
 - TI DAC7311 datasheet
 - ARM Cortex-M0+ user guide
+- Spartan 7 datasheet
+- SpartanEdge Accelerator (SEA) user and experimental manuals and schematics
 
 ## License
 
