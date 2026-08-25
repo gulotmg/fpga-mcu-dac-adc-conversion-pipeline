@@ -157,7 +157,7 @@ Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed 
 | 500 | 2 kHz | 50.73 | 32.88 | 45.19 | −46.61 | 7.21 |
 | 1000 | 1 kHz | 54.37 | 33.85 | 46.98 | −47.85 | 7.51 |
 
-
+<img width="1547" height="840" alt="Results_8_bit_1000hz_DAC" src="https://github.com/user-attachments/assets/d6c85194-d09e-46d8-bf90-08033b55ffaf" />
 
 Image of "Front Panel" for one instance (for demonstration and brevity)
 
