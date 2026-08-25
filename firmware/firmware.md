@@ -76,17 +76,14 @@ PA1  (ADC_IN1, CH1) ────► ADC1 (12-bit, sync clk PCLK/2)
 ## Build & flash
 
 1. STM32CubeIDE (tested v1.19.0): *File → Import → Existing Projects* → `firmware/`.
-2. Build; flash via on-board ST-LINK/V2-1 (CN2 jumpers fitted, JP5 [1-2],
-   default UM2953 configuration).
+2. Build; flash via on-board ST-LINK/V2-1.
 3. UART appears as the ST-LINK Virtual COM Port: 115200 8N1.
 
-## Design notes / gotchas
+## Design notes 
 
 - `ADSTART` must be issued after the DMA channel is enabled, or the first
   DMA request can be lost.
 - `DMA1->IFCR` is write-1-to-clear: writing the flag *sets* the clear action.
-- Disabling the DMA channel in the TC ISR prevents buffer overwrite while
-  the UART state is draining it.
 - Synchronous ADC clock mode was chosen to remove async-clock jitter on the
-  external trigger path (see `docs/bottleneck_analysis.md`).
+  external trigger path.
 - Single-buffer, one-shot design by choice: reset re-arms the whole chain.
