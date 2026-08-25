@@ -73,7 +73,7 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
    Products* → *Generate Output Products*.
 3. Regenerate `.coe` tables if needed (256 points, 8 bit, see `coe/`).
 4. Run synthesis → implementation → generate bitstream; program the SEA board.
-5. To program the SEA board see https://github.com/Pillar1989/spartan-edge-esp32-boot and https://www.digikey.de/en/product-highlight/s/seeed/spartan-edge-accelerator-board-resources
+5. To load the bitstream to the SEA board see https://github.com/Pillar1989/spartan-edge-esp32-boot and https://www.digikey.de/en/product-highlight/s/seeed/spartan-edge-accelerator-board-resources
 6. Pin assignments: see `constraints/*.xdc`.
 
 ## Design notes
