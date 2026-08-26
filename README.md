@@ -61,22 +61,22 @@ coherent-sampling spectral analysis (SNR / SFDR / SINAD / THD / ENOB).
 ### HTTPS (no SSH key required)
 
 ```bash
-git clone https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline-.git
-cd fpga-mcu-dac-adc-conversion-pipeline-
+git clone https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
+cd fpga-mcu-dac-adc-conversion-pipeline
 ```
 
 ### SSH (recommended if you already have an SSH key configured on GitHub)
 
 ```bash
-git clone git@github.com:gulotmg/fpga-mcu-dac-adc-conversion-pipeline-.git
-cd fpga-mcu-dac-adc-conversion-pipeline-
+git clone git@github.com:gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
+cd fpga-mcu-dac-adc-conversion-pipeline
 ```
 
 ### GitHub CLI
 
 ```bash
-gh repo clone gulotmg/fpga-mcu-dac-adc-conversion-pipeline-
-cd fpga-mcu-dac-adc-conversion-pipeline-
+gh repo clone gulotmg/fpga-mcu-dac-adc-conversion-pipeline
+cd fpga-mcu-dac-adc-conversion-pipeline
 ```
 
 ### Download as ZIP
@@ -87,7 +87,7 @@ If you don't want to use Git, you can download the source code as a ZIP archive:
 
 ### Repository link
 
-🔗 https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline-
+🔗 https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline
 
 ### After cloning
 
