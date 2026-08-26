@@ -20,24 +20,24 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 
 ## Implementation
 
-- **Waveform ROMs** — three BRAM IP cores (`ROM_Sin`, `ROM_trig`, `ROM_saw`),
+- **Waveform ROMs** : three BRAM IP cores (`ROM_Sin`, `ROM_trig`, `ROM_saw`),
   256 entries × 8 bit, initialized from MATLAB-generated `.coe` files. All
   three are read in parallel with the same address; a MUX selects the output.
-- **Phase accumulator / frequency control** — `addr_reg` is incremented by the
+- **Phase accumulator / frequency control** : `addr_reg` is incremented by the
   one-hot step `addr_mask` at the end of every serial frame. `SELECT1`
   doubles the step (1→2→…→128→1): output frequency = `f_update · step / 256`,
   i.e. ≈ 1/2/4/8 kHz; the same frequencies used in the measurement campaign.
   Step > 1 trades time resolution for frequency (amplitude resolution unchanged).
-- **Waveform select** — 2-bit mode counter incremented with 'SELECT2': `00` sine, `01` triangle,
+- **Waveform select** : 2-bit mode counter incremented with 'SELECT2': `00` sine, `01` triangle,
   `11` sawtooth; the unused state safely defaults to sine. 
-- **DAC7311 serial interface** — 2-state FSM (`WAIT_FOR_SYNC`, `DATA_MOVING`).
+- **DAC7311 serial interface** : 2-state FSM (`WAIT_FOR_SYNC`, `DATA_MOVING`).
   ~3.6 µs inter-frame gap with SYNC high, then SYNC low and 16 bits shifted
   MSB first: `DIN` updated while SCLK high, shifted on SCLK low (DAC latches
   on the falling edge). Frame format: `[PD1:PD0][D11:D0][X:X]` =
   `"00" & sample(8) & "000000"` (8-bit code in D11:D4, power-down bits = 00).
-- **100 kHz trigger** — 1000-cycle counter: `INT_PIN` high ≈ 1 µs, low ≈ 9 µs,
+- **100 kHz trigger** : 1000-cycle counter: `INT_PIN` high ≈ 1 µs, low ≈ 9 µs,
   period 10 µs.
-- **Reset / buttons** — ~20 ms counter-based debouncing; reset restores FSM,
+- **Reset / buttons** : ~20 ms counter-based debouncing; reset restores FSM,
   accumulator, step and counters.
 
 ## Timing summary
