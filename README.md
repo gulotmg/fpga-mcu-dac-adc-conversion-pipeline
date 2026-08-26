@@ -12,17 +12,6 @@ ADC samples are moved by DMA into a 1000-sample buffer and, when the buffer is f
 firmware state machine streams it over UART to a LabVIEW (VISA) host that performs
 coherent-sampling spectral analysis (SNR / SFDR / SINAD / THD / ENOB).
 
-## System overview
-
-```
-SEA/FPGA ──> DAC7311 ──> analog output ──> STM32 ADC input (ADC_INx)
-SEA/FPGA ──> 100 kHz trigger ───────────> PA11 / EXTI11 (ADC hw trigger)
-STM32: ADC @ 100 kSPS → DMA → 1000-sample buffer → FSM → UART TX
-PC: LabVIEW VISA receiver → time/frequency-domain analysis
-```
-
-FSM: `IDLE → SAMPLING → TRANSMIT → DONE`
-
 ## Features
 
 - FPGA DDS drives the DAC7311 at 8-bit code resolution: sine / triangle / sawtooth;
@@ -46,7 +35,7 @@ FSM: `IDLE → SAMPLING → TRANSMIT → DONE`
 ├── firmware/                     # bare-metal STM32C0 (ADC, DMA, EXTI, UART, FSM)
 ├── VHDL/                         # SEA board: DDS + 100 kHz trigger
 ├── labview/                      # VISA receiver + analysis VI
-├── data/                         # raw acquisitions (CSV)
+├── data/                         # raw acquisitions (.COE)
 ```
 
 ## Requirements (reproducibility)
