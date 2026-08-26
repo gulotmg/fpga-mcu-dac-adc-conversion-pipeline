@@ -1,8 +1,8 @@
 # firmware/ — Bare-metal STM32C031C6 Acquisition Firmware
 
 Register-level firmware (no HAL, CMSIS device macros only) that acquires
-1000 ADC samples at 100 kSPS — hardware-triggered by the FPGA via EXTI line
-11 — moves them to RAM by DMA, and streams the buffer as ASCII over USART2
+1000 ADC samples at 100 kSPS, hardware-triggered by the FPGA via EXTI line
+11, moves them to RAM by DMA, and streams the buffer as ASCII over USART2
 to the LabVIEW host. CPU involvement during sampling is zero: the whole
 acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
 `__WFI()` until the DMA Transfer-Complete interrupt fires.
@@ -22,21 +22,21 @@ acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
 
 ## Peripheral configuration
 
-- **ADC1 (`adc.c`)** — PA1 analog, channel 1; synchronous clock `CKMODE=01`
+- **ADC1 (`adc.c`)** : PA1 analog, channel 1; synchronous clock `CKMODE=01`
   (PCLK/2, deterministic trigger latency); regulator on + calibration
   (`ADCAL`, ADEN=0); `DMAEN=1/DMACFG=0` (one DMA request per conversion);
   external trigger `EXTSEL=111` (EXTI11), `EXTEN=01` (rising edge), `CONT=0`;
   sampling time 12.5 cycles; enabled and armed (`ADSTART`) **after** DMA.
-- **DMA1_CH1 (`DMA.c`)** — source `ADC1->DR`, destination `adc_buffer`,
+- **DMA1_CH1 (`DMA.c`)** : source `ADC1->DR`, destination `adc_buffer`,
   `CNDTR=1000`, 16-bit/16-bit, memory-increment, priority high;
   **DMAMUX channel 0 = request 0x05 (ADC1)** — without this routing the ADC
   DMA requests never reach the DMA and the system stays silent; TC interrupt
   enabled in NVIC before channel enable.
-- **EXTI (`extiADC.c`)** — PA11 digital input, pull-down; line 11 mapped to
+- **EXTI (`extiADC.c`)** : PA11 digital input, pull-down; line 11 mapped to
   port A (`EXTICR[2]`); rising edge (`RTSR1`); event unmasked (`EMR1`) for
   hardware routing to the ADC trigger (no EXTI NVIC IRQ used: conversion
   start is fully hardware).
-- **USART2 (`uart.c`)** — PA2 AF1, TX only; `BRR = (clk + baud/2)/baud`
+- **USART2 (`uart.c`)** : PA2 AF1, TX only; `BRR = (clk + baud/2)/baud`
   (rounded integer division) @ 12 MHz → 115200; `__io_putchar` retarget so
   `printf` works; TX waits on `TXE_TXFNF`.
 
