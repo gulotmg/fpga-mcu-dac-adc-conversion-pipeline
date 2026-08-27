@@ -148,21 +148,14 @@ Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed 
 
 <img width="1547" height="840" alt="Results_8_bit_1000hz_DAC" src="https://github.com/user-attachments/assets/d6c85194-d09e-46d8-bf90-08033b55ffaf" />
 
-Image of "Front Panel" for one instance (for demonstration and brevity)
+*Image of "Front Panel" for one instance (for demonstration and brevity)*
 
 ## Known limitations and interpretation of results
 
-- The "DAC-limited" statement is valid only in the low-frequency regime;
-  at 8 kHz the limit is very likely a timing error (trigger jitter).
-- No reconstruction low-pass filter between DAC and ADC.
-- Single-buffer acquisition after reset; continuous streaming is not
-  implemented; not a real limitation, as it is easily implementable and
-  simply not needed for this use case.
-- Truly characterizing either the DAC or the ADC alone would require a strong
-  reference provided by high-quality instrumentation. For this reason, this is
-  not a characterization of the single DAC or ADC components, but rather a
-  characterization of the performance of the whole pipeline, since it is not
-  easy to tell which element is responsible for the observed degradation.
+- **8-bit DAC Resolution**: The DAC was restricted to an 8-bit code resolution in an attempt to characterize its specific performance. At higher code resolutions, an improvement in ENOB is likely, as the system's bottleneck would shift to the Nucleo's 12-bit SAR ADC (which has a declared ENOB of 10.2 bits in the datasheet). However, this is not guaranteed. The actual ADC performance may differ from the datasheet specifications, especially given the non-ideal measurement conditions under which the experiment was conducted.
+- **Frequency-Dependent Limitations**: The conclusion that the system is "DAC-limited" is valid only in the low-frequency regime. At higher frequencies (e.g., 8 kHz), the performance limit is most likely caused by timing errors, such as trigger jitter.
+- **Missing Reconstruction Filter**: There is no reconstruction low-pass filter placed between the DAC and the ADC.
+- **Pipeline vs. Component Characterization**: Accurately characterizing either the DAC or the ADC individually would require a high-precision reference provided by professional-grade laboratory instrumentation. Therefore, this experiment does not characterize the individual DAC or ADC components, but rather the performance of the entire signal chain (pipeline), as it is difficult to isolate which specific element is responsible for the observed signal degradation.
 
 ## References
 
