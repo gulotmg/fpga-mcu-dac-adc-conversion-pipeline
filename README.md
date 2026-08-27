@@ -2,15 +2,16 @@
 
 Acquisition pipeline built around an STM32 Nucleo-C031C6 and a Spartan-7
 SEA/FPGA board. The FPGA design is developed in Vivado as fully custom VHDL
-(vendor IP limited to the BRAMs storing the MATLAB-generated .coe waveform
+(vendor IP limited to the BRAMs storing the MATLAB-generated `.coe` waveform
 tables): it drives a TI DAC7311, used at 8-bit code resolution, to generate
 sine, triangle and sawtooth waveforms and provides a 100 kHz trigger that
 hardware-triggers the STM32 ADC via EXTI line 11.
 
-The STM32 firmware is written entirely bare-metal at register level (no HAL), developed in STM32CubeIDE: 
-ADC samples are moved by DMA into a 1000-sample buffer and, when the buffer is full, a 
-firmware state machine streams it over UART to a LabVIEW (VISA) host that performs
-coherent-sampling spectral analysis (SNR / SFDR / SINAD / THD / ENOB).
+The STM32 firmware is written entirely bare-metal at register level (no HAL),
+developed in STM32CubeIDE: ADC samples are moved by DMA into a 1000-sample
+buffer and, when the buffer is full, a firmware state machine streams it over
+UART to a LabVIEW (VISA) host that performs coherent-sampling spectral
+analysis (SNR / SFDR / SINAD / THD / ENOB).
 
 ## Features
 
@@ -68,7 +69,7 @@ cd fpga-mcu-dac-adc-conversion-pipeline
 ### SSH (recommended if you already have an SSH key configured on GitHub)
 
 ```bash
-git clone git@github.com:gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
+git clone git@github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
 cd fpga-mcu-dac-adc-conversion-pipeline
 ```
 
@@ -83,11 +84,9 @@ cd fpga-mcu-dac-adc-conversion-pipeline
 
 If you don't want to use Git, you can download the source code as a ZIP archive:
 
-👉 [Download ZIP](https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline-/archive/refs/heads/main.zip)
+ [Download ZIP](https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline/archive/refs/heads/main.zip)
 
-### Repository link
-
-🔗 https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline
+ Repository link: https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline
 
 ### After cloning
 
@@ -128,23 +127,57 @@ Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed 
 
 ## Measurement methodology
 
-- Coherent sampling: `N = 10 · fs / f_sig` (integer number of periods →
-  rectangular window, no leakage), `fs = 100 kSPS`.
-- `N ∈ {125, 250, 500, 1000}` → `f_sig ∈ {8, 4, 2, 1 kHz}`; 15 harmonics
-  extracted, when possible.
-- Metrics: `SNR = 20log(Vfund/Vnoise_rms)`, `SFDR = 20log(Vfund/Vspur_max_rms)`,
-  `SINAD = 20log(Vfund/√(ΣVh² + Vnoise²))`, `THD = 20log(√(ΣVh²)/Vfund)`,
-  `ENOB = (SINAD − 1.76)/6.02`.
-- All metrics refer to the **complete chain**: DAC7311 + interconnect + STM32 ADC.
+### Coherent sampling
+
+The spectral analysis relies on **coherent sampling**: the record length $N$
+is chosen so that each acquisition contains an **integer number of periods**
+(exactly 10) of the generated sine wave. This makes the rectangular window
+exact and completely eliminates spectral leakage.
+
+$$N = 10 \cdot \frac{f_s}{f_{sig}} \qquad \text{with} \quad f_s = 100 \ \mathrm{kSPS}$$
+
+Sweeping $N$ over the available record lengths yields the following test
+frequencies (10 periods per record in every case):
+
+| $N$ (samples) | $f_{sig}$ (kHz) | Periods in record |
+|---|---|---|
+| 125  | 8 | 10 |
+| 250  | 4 | 10 |
+| 500  | 2 | 10 |
+| 1000 | 1 | 10 |
+
+For each acquisition, up to **15 harmonics** are extracted, when possible
+(i.e., while they fall below the Nyquist frequency $f_s/2$).
+
+### Performance metrics
+
+$$\mathrm{SNR} = 20 \log_{10}\\left(\frac{V_{fund}}{V_{noise,\mathrm{rms}}}\right) \quad [\mathrm{dB}]$$
+
+$$\mathrm{SFDR} = 20 \log_{10}\\left(\frac{V_{fund}}{V_{spur,\mathrm{max}}}\right) \quad [\mathrm{dB}]$$
+
+$$\mathrm{SINAD} = 20 \log_{10}\\left(\frac{V_{fund}}{\sqrt{\sum_{h=2}^{15} V_{h}^{2} + V_{noise,\mathrm{rms}}^{2}}}\right) \quad [\mathrm{dB}]$$
+
+$$\mathrm{THD} = 20 \log_{10}\\left(\frac{\sqrt{\sum_{h=2}^{15} V_{h}^{2}}}{V_{fund}}\right) \quad [\mathrm{dB}]$$
+
+$$\mathrm{ENOB} = \frac{\mathrm{SINAD} - 1.76}{6.02} \quad [\mathrm{bit}]$$
+
+where:
+
+- $V_{fund}$ : RMS amplitude of the fundamental at $f_{sig}$;
+- $V_{noise,\mathrm{rms}}$ : RMS noise floor, excluding the fundamental and the extracted harmonics;
+- $V_{spur,\mathrm{max}}$ : RMS amplitude of the largest spurious component;
+- $V_{h}$ : RMS amplitude of the $h$-th harmonic, $h = 2 \dots 15$.
+
+All metrics refer to the **complete chain**: DAC7311 + interconnect + STM32 ADC.
 
 ## Results (sine wave, system-level)
 
-| N | f_sig | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
+| $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
 |---|---|---|---|---|---|---|
-| 125 | 8 kHz | 40.94 | 30.21 | 38.51 | −42.19 | 6.10 |
-| 250 | 4 kHz | 45.81 | 32.27 | 43.73 | −44.93 | 6.97 |
-| 500 | 2 kHz | 50.73 | 32.88 | 45.19 | −46.61 | 7.21 |
-| 1000 | 1 kHz | 54.37 | 33.85 | 46.98 | −47.85 | 7.51 |
+| 125  | 8 | 40.94 | 30.21 | 38.51 | −42.19 | 6.10 |
+| 250  | 4 | 45.81 | 32.27 | 43.73 | −44.93 | 6.97 |
+| 500  | 2 | 50.73 | 32.88 | 45.19 | −46.61 | 7.21 |
+| 1000 | 1 | 54.37 | 33.85 | 46.98 | −47.85 | 7.51 |
 
 <img width="1547" height="840" alt="Results_8_bit_1000hz_DAC" src="https://github.com/user-attachments/assets/d6c85194-d09e-46d8-bf90-08033b55ffaf" />
 
@@ -152,15 +185,15 @@ Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed 
 
 ## Known limitations and interpretation of results
 
-- **8-bit DAC Resolution**: The DAC was restricted to an 8-bit code resolution in an attempt to characterize its specific performance. At higher code resolutions, an improvement in ENOB is likely, as the system's bottleneck would shift to the Nucleo's 12-bit SAR ADC (which has a declared ENOB of 10.2 bits in the datasheet). However, this is not guaranteed. The actual ADC performance may differ from the datasheet specifications, especially given the non-ideal measurement conditions under which the experiment was conducted.
-- **Frequency-Dependent Limitations**: The conclusion that the system is "DAC-limited" is valid only in the low-frequency regime. At higher frequencies (e.g., 8 kHz), the performance limit is most likely caused by timing errors, such as trigger jitter.
-- **Missing Reconstruction Filter**: There is no reconstruction low-pass filter placed between the DAC and the ADC.
-- **Pipeline vs. Component Characterization**: Accurately characterizing either the DAC or the ADC individually would require a high-precision reference provided by professional-grade laboratory instrumentation. Therefore, this experiment does not characterize the individual DAC or ADC components, but rather the performance of the entire signal chain (pipeline), as it is difficult to isolate which specific element is responsible for the observed signal degradation.
+- **8-bit DAC Resolution**: The DAC was restricted to an 8-bit code resolution in an attempt to characterize its specific performance. At higher code resolutions, the DAC's quantization noise would theoretically decrease, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC (which has a declared ENOB of up to 10.2 bits in the datasheet under specific test conditions). However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain lower than the ADC's noise floor, which is not guaranteed in non-ideal measurement conditions or without a precision voltage reference.
+- **Frequency-Dependent Limitations**: The conclusion that the system is strictly "DAC-limited" is valid primarily in the low-frequency regime. At higher signal frequencies (e.g., approaching 8 kHz and beyond), performance degradation is likely dominated by timing uncertainties or DAC settling time limitations rather than pure quantization limits.
+- **Missing Reconstruction Filter**: There is no reconstruction low-pass filter placed between the DAC and the ADC. Consequently, the ADC samples the DAC's high-frequency step transitions, possibly introducing wideband noise that aliases back into the baseband, lowering the measured system ENOB.
+- **Pipeline vs. Component Characterization**: Accurately characterizing either the DAC or the ADC individually requires a "golden reference" provided by professional-grade laboratory instrumentation (typically 3 to 4 bits more precise). Therefore, this experiment does not characterize the individual components, but rather the cascade performance of the entire signal chain, as it is rather complex to isolate the exact noise contribution of each element without an external reference.
 
 ## References
 
-- RM0490 — STM32C0x1/C0x3 reference manual (ADC, DMA, EXTI, USART)
-- UM2953 — NUCLEO-C031C6 / NUCLEO-C051C8 user manual
+- RM0490 : STM32C0x1/C0x3 reference manual (ADC, DMA, EXTI, USART)
+- UM2953 : NUCLEO-C031C6 / NUCLEO-C051C8 user manual
 - STM32C031 datasheet
 - TI DAC7311 datasheet
 - ARM Cortex-M0+ user guide
