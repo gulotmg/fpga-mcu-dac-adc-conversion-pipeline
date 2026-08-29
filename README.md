@@ -185,11 +185,15 @@ All metrics refer to the **complete chain**: DAC7311 + interconnect + STM32 ADC.
 
 ## Known limitations and interpretation of results
 
-- **8-bit DAC Resolution**: The DAC was restricted to an 8-bit code resolution in an attempt to characterize its specific performance. At higher code resolutions, the DAC's quantization noise would theoretically decrease, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC (which has a declared ENOB of up to 10.2 bits in the datasheet under specific test conditions). However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain lower than the ADC's noise floor, which is not guaranteed in non-ideal measurement conditions or without a precision voltage reference.
-- **Frequency-Dependent Limitations**: The conclusion that the system is strictly "DAC-limited" is valid primarily in the low-frequency regime. At higher signal frequencies (e.g., approaching 8 kHz and beyond), performance degradation is likely dominated by timing uncertainties or DAC settling time limitations rather than pure quantization limits.
-- **Missing Reconstruction Filter**: There is no reconstruction low-pass filter placed between the DAC and the ADC. Consequently, the ADC samples the DAC's high-frequency step transitions, possibly introducing wideband noise that aliases back into the baseband, lowering the measured system ENOB.
-- **Pipeline vs. Component Characterization**: Accurately characterizing either the DAC or the ADC individually requires a "golden reference" provided by professional-grade laboratory instrumentation (typically 3 to 4 bits more precise). Therefore, this experiment does not characterize the individual components, but rather the cascade performance of the entire signal chain, as it is rather complex to isolate the exact noise contribution of each element without an external reference.
+- **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally restricted to 8-bit resolution in an attempt to characterize its specific baseline performance. Increasing the DAC's code resolution would hypothetically reduce its quantization noise, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC, which specifies an ENOB of up to 10.2 bits under specific datasheet conditions. However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain below the ADC's noise floor. Therefore, it would be ideal to develop a separate testbench to evaluate the independent performance of each component, thus validating the assumptions regarding the former statement and the ones that follow.
 
+- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity.
+
+- **System-Level vs. Component-Level Characterization**: Without a suitable "golden reference", the individual contributions of the ADC and DAC cannot be independently isolated. Therefore, this experiment is closer to characterizing the cascade performance of the entire signal chain rather than the independent performance of each component. Nevertheless, it can provide an indicative estimate of the DAC's performance at 8-bit resolution.
+  
+- **Missing Reconstruction Filter**: No low-pass reconstruction filter is placed between the DAC and the ADC. Consequently, the ADC directly samples the DAC's high-frequency spectral components, which may alias into the baseband and lower the overall measured system ENOB.
+
+  
 ## References
 
 - RM0490 : STM32C0x1/C0x3 reference manual (ADC, DMA, EXTI, USART)
