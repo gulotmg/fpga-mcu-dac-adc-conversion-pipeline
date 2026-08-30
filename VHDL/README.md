@@ -2,7 +2,7 @@
 
 Fully custom VHDL DDS that reads 256×8-bit waveform lookup tables from Block
 RAM and streams samples to a TI DAC7311 over a 3-wire serial interface, while
-outputting a 100 kHz trigger for the STM32 ADC (EXTI11). Vendor IP is used
+outputting a 500 kHz trigger for the STM32 ADC (EXTI11). Vendor IP is used
 only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 
 ## Ports
@@ -46,10 +46,9 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 |---|---|
 | System clock | 100 MHz |
 | DAC serial clock | 50 MHz |
-| Serial frame | 16 bits (~0.32 µs) + ~3.6 µs gap |
-| DAC update rate | ≈ 255 kHz |
+| Serial frame | 16 bits|
 | Base output frequency (step = 1) | ≈ 1 kHz |
-| Trigger period | 10 µs (500 kHz) |
+| Trigger period |(500 kHz) |
 
 ## Build & program
 
@@ -64,5 +63,5 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 ## Design notes
 
 - Amplitude resolution is deliberately limited to 8 bit (DAC7311 driven with 8-bit codes);
-- Single-process synchronous design: one clock domain, no CDC issues, easier manageability. 
+- Single-process synchronous design: one clock domain, easier manageability. 
 - Usage of 'signal', this allows for greater observability with respects to 'variable' for instance.
