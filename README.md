@@ -32,17 +32,17 @@ aliasing artifacts in the sampled data.
   vendor IP blocks used only for the BRAMs; everything else is fully custom,
   synthesizable VHDL, carried through synthesis and implementation down to a
   working bitstream;
-- Raw captures committed in `data/` for reproducibility.
+- .coe and MATLAB script stored in `data/` for reproducibility.
 
 ## Repository structure
 
 ```
 ├── README.md
-├── docs/                         # manuals, references, datasheets
+├── docs/                         # links to manuals, references, datasheets
 ├── firmware/                     # bare-metal STM32C0 (ADC, DMA, EXTI, UART, FSM)
 ├── VHDL/                         # SEA board: DDS + 500 kHz trigger
 ├── labview/                      # VISA receiver + analysis VI
-├── data/                         # raw acquisitions (.COE)
+├── data/                         # (.COE & MATLAB script)
 ```
 
 ## Requirements (reproducibility)
@@ -61,7 +61,7 @@ aliasing artifacts in the sampled data.
 - Xilinx Vivado ≥ 2019.1 (Spartan-7 toolchain);
 - MATLAB or equivalent, to generate the `.coe` waveform files for the BRAMs;
 - LabVIEW ≥ 2021 SP1;
-- Reference documentation (placed in the appropriate folder of this repo):
+- Links to reference documentation (placed in the appropriate folder of this repo):
   RM0490, UM2953, STM32C031 datasheet, TI DAC7311 datasheet, ARM Cortex-M0+ user guide.
 
 ## How to clone this repository
