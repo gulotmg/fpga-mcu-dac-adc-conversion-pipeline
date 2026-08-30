@@ -28,7 +28,7 @@ acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
   external trigger `EXTSEL=111` (EXTI11), `EXTEN=01` (rising edge), `CONT=0`;
   sampling time 12.5 cycles; enabled and armed (`ADSTART`) **after** DMA.
 - **DMA1_CH1 (`DMA.c`)** : source `ADC1->DR`, destination `adc_buffer`,
-  `CNDTR=1000`, 16-bit/16-bit, memory-increment, priority high;
+  `CNDTR=5000`, 16-bit/16-bit, memory-increment, priority high;
   **DMAMUX channel 0 = request 0x05 (ADC1)** — without this routing the ADC
   DMA requests never reach the DMA and the system stays silent; TC interrupt
   enabled in NVIC before channel enable.
@@ -45,7 +45,7 @@ acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
 1. `INIT`: uart → exti → adc → dma → `ADSTART`; enter `SAMPLING`.
 2. `SAMPLING`: `__WFI()`. Every EXTI11 rising edge: ADC converts, DMA writes
    one sample. CPU stays asleep.
-3. After 1000 transfers: DMA TC IRQ → clear `TCIF1` via `IFCR`
+3. After 5000 transfers: DMA TC IRQ → clear `TCIF1` via `IFCR`
    (write-1-to-clear), disable the DMA channel (freeze buffer), → `UART`.
 4. `UART`: `printf("%d\n")` per sample (ASCII decimal, one per line) → `HALT`.
 5. `HALT`: `__WFI()` forever; press reset to re-run.
