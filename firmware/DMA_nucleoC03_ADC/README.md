@@ -1,7 +1,7 @@
 # firmware/ — Bare-metal STM32C031C6 Acquisition Firmware
 
 Register-level firmware (no HAL, CMSIS device macros only) that acquires
-1000 ADC samples at 100 kSPS, hardware-triggered by the FPGA via EXTI line
+5000 ADC samples at 500 kSPS, hardware-triggered by the FPGA via EXTI line
 11, moves them to RAM by DMA, and streams the buffer as ASCII over USART2
 to the LabVIEW host. CPU involvement during sampling is zero: the whole
 acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
@@ -37,7 +37,7 @@ acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
   hardware routing to the ADC trigger (no EXTI NVIC IRQ used: conversion
   start is fully hardware).
 - **USART2 (`uart.c`)** : PA2 AF1, TX only; `BRR = (clk + baud/2)/baud`
-  (rounded integer division) @ 12 MHz → 115200; `__io_putchar` retarget so
+  (rounded integer division) @ 48 MHz → 115200; `__io_putchar` retarget so
   `printf` works; TX waits on `TXE_TXFNF`.
 
 ## Acquisition flow
@@ -54,12 +54,11 @@ acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
 
 | Parameter | Value |
 |---|---|
-| System / peripheral clock | 12 MHz (reset default) |
-| ADC clock (synchronous) | 6 MHz |
-| Conversion time | 12.5 (sampling) + 12.5 (12-bit) = 25 cycles ≈ 4.2 µs |
-| Trigger period | 10 µs (100 kHz) → conversion fits with > 50% margin |
-| Buffer fill time | 1000 × 10 µs = 10 ms |
-| UART dump | ≈ 0.4–0.5 s @ 115200 8N1 (BRR=104 → 115384 baud, 0.16% error) |
+| System / peripheral clock | 48 MHz |
+| ADC clock (synchronous) | 24 MHz |
+| Conversion time | 12.5 (sampling) + 12.5 (12-bit) = 25 cycles |
+| Trigger frequency | (500 kHz)|
+| Buffer fill time | 5000 × (1/500 kHz) = 10 ms |
 
 ## Build & flash
 
@@ -68,10 +67,6 @@ acquisition chain (EXTI → ADC → DMA) runs in hardware; the core sleeps in
 3. UART appears as the ST-LINK Virtual COM Port: 115200 8N1.
 
 ## Design notes 
-
-- `ADSTART` must be issued after the DMA channel is enabled, or the first
-  DMA request can be lost.
-- `DMA1->IFCR` is write-1-to-clear: writing the flag *sets* the clear action.
 - Synchronous ADC clock mode was chosen to remove async-clock jitter on the
   external trigger path.
 - Single-buffer, one-shot design by choice: reset re-arms the whole chain.
