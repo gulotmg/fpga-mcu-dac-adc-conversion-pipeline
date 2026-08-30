@@ -85,7 +85,7 @@ int main(void) {
 
                 // Transmit the acquired buffer via UART
                 for (int counter = 0; counter < 5000; counter++) {
-                    printf("%d\n\r", adc_buffer[counter]);
+                    printf("%d\n", adc_buffer[counter]);
 
                 }
 
