@@ -34,6 +34,29 @@ aliasing artifacts in the sampled data.
   working bitstream;
 - .coe and MATLAB script stored in `data/` for reproducibility.
 
+```mermaid
+flowchart LR
+    FPGA["FPGA<br/>DDS + 500 kHz trigger"]
+    DAC["DAC7311<br/>8-bit"]
+    FILTER["RC low-pass filter<br/>23.1 kHz"]
+    ADC["STM32 ADC<br/>12-bit / 500 kSPS"]
+    DMA["DMA<br/>5000-sample buffer"]
+    UART["UART<br/>115200 baud"]
+    LABVIEW["LabVIEW<br/>FFT and metrics"]
+    EXTI["PA11<br/>EXTI11"]
+
+    FPGA -->|8-bit waveform| DAC
+    DAC -->|Analog staircase signal| FILTER
+    FILTER -->|Filtered signal| ADC
+    ADC -->|ADC samples| DMA
+    DMA -->|Full buffer| UART
+    UART -->|Serial data| LABVIEW
+
+    FPGA -.->|500 kHz trigger| EXTI
+    EXTI -.->|ADC external trigger| ADC
+```
+
+
 ## Repository structure
 
 ```
