@@ -3,7 +3,7 @@
 -- Description: 
 --   Generates periodic waveforms using Block RAM lookup tables (ROM)
 --   and transmits samples via a 3-wire serial interface to a DAC7311.
---   - Interrupt generation: 100 kHz signal generated and output by an FPGA_GPIO pin
+--   - Interrupt generation: 500 kHz signal generated and output by an FPGA_GPIO pin
 --   - Frequency control: Managed by the address step / delay prescaler.
 --   - Waveform select: Cycles through Sine, Triangle, and Sawtooth.
 --------------------------------------------------------------------------------
