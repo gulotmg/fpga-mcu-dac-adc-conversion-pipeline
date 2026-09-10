@@ -224,25 +224,25 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 
 | $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
 |---|---|---|---|---|---|---|
-| 5000 | 1 | 62.0919 | 33.5177 | 51.3887 | −51.7748 | 8.24398 |
-| 2500 | 2 | 57.9371 | 32.6168 | 49.1370 | −49.7509 | 7.86993 |
-| 1250 | 4 | 52.1852 | 32.8241 | 37.5271 | −37.6783 | 5.94139 |
-| 625  | 8 | 48.4174 | 32.0512 | 27.9024 | −27.9411 | 4.34259 |
+| 5000 | 1 | 62.0919 | 33.5177 | 51.3887 | −51.7748 | 8.7349 |
+| 2500 | 2 | 57.9371 | 32.6168 | 49.1370 | −49.7509 | 7.8699 |
+| 1250 | 4 | 52.1852 | 32.8241 | 37.5271 | −37.6783 | 5.9413 |
+| 625  | 8 | 48.4174 | 32.0512 | 27.9024 | −27.9411 | 4.3425 |
 
 ### Results WITH reconstruction filter (sine wave, $f_s = 500$ kSPS, 10 periods per record)
 
 | $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
 |---|---|---|---|---|---|---|
-| 5000 | 1 | 62.2742 | 32.9582 | 55.2627 | −56.2263 | 8.88748 |
-| 2500 | 2 | 59.5863 | 33.4373 | 49.4620 | −49.9060 | 7.92393 |
-| 1250 | 4 | 55.9347 | 33.1833 | 43.1892 | −43.4264 | 6.88193 |
-| 625  | 8 | 52.4061 | 32.3766 | 34.3292 | −34.3974 | 5.41017 |
+| 5000 | 1 | 62.2742 | 32.9582 | 55.2627 | −56.2263 | 8.8874 |
+| 2500 | 2 | 59.5863 | 33.4373 | 49.4620 | −49.9060 | 7.9239 |
+| 1250 | 4 | 55.9347 | 33.1833 | 43.1892 | −43.4264 | 6.8819 |
+| 625  | 8 | 52.4061 | 32.3766 | 34.3292 | −34.3974 | 5.4101 |
 
-<img width="1618" height="867" alt="1kfilt" src="https://github.com/user-attachments/assets/b1149c9e-aa9e-418f-851c-573ad2f322fb" />
+<img width="1312" height="711" alt="Screenshot 2026-09-10 190328" src="https://github.com/user-attachments/assets/a575064b-b9e2-42a9-9b86-6d5b6550eeed" />
 
 *Image of "Front Panel" for filtered DAC generated 1kHz sinewave*
 
-<img width="1546" height="875" alt="1knofilt" src="https://github.com/user-attachments/assets/66beae0c-e1ef-48f1-9040-7a58602739aa" />
+<img width="1393" height="732" alt="1khz_nofilter" src="https://github.com/user-attachments/assets/9d5ece81-790c-4227-9838-7946fc7c1e2a" />
 
 *Image of "Front Panel" for UNfiltered DAC generated 1kHz sinewave*
 
@@ -250,11 +250,9 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 
 - **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally restricted to 8-bit resolution in an attempt to characterize its specific baseline performance. Increasing the DAC's code resolution would hypothetically reduce its quantization noise, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC, which specifies an ENOB of up to 10.2 bits under specific datasheet conditions. However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain below the ADC's noise floor. Therefore, it would be ideal to develop a separate testbench to evaluate the independent performance of each component, thus validating the assumptions regarding the former statement and the ones that follow.
 
-- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity.
+- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. There's also an issue to be investigated related to unpredicted noise around the fundamental.
 
 - **System-Level vs. Component-Level Characterization**: Without a suitable "golden reference", the individual contributions of the ADC and DAC cannot be independently isolated. Therefore, this experiment is closer to characterizing the cascade performance of the entire signal chain rather than the independent performance of each component. Nevertheless, it can provide an indicative estimate of the DAC's performance at 8-bit resolution.
-
-- **LabVIEW Record-Length Constraint**: The current LabVIEW VI performs coherent analysis on a fixed record of 10 periods. The number of acquired samples ($N$) must therefore be manually matched to the desired signal frequency according to the table in the "Measurement methodology" section. A future revision could implement automatic fundamental detection and adaptive record selection.
 
 ## References
 
