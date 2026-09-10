@@ -191,11 +191,6 @@ frequencies (10 periods per record in every case):
 | 2500 | 2  | 10 |
 | 5000 | 1  | 10 |
 
-> **Note:** the current LabVIEW VI is hard-coded to analyze exactly 10 periods
-> per record. As a consequence, $N$ must be manually selected according to the
-> desired signal frequency. Extending the VI to automatically detect the
-> fundamental and adaptively choose the record length is planned as future work.
-
 For each acquisition, up to **15 harmonics** are extracted, when possible
 (i.e., while they fall below the Nyquist frequency $f_s/2$).
 
@@ -216,7 +211,8 @@ where:
 - $V_{fund}$ : RMS amplitude of the fundamental at $f_{sig}$;
 - $V_{noise,\mathrm{rms}}$ : RMS noise floor, excluding the fundamental and the extracted harmonics;
 - $V_{spur,\mathrm{max}}$ : RMS amplitude of the largest spurious component;
-- $V_{h}$ : RMS amplitude of the $h$-th harmonic, $h = 2 \dots 15$.
+- $V_{h}$ : RMS amplitude of the $h$-th harmonic, $h = 2 \dots 15$;
+- Noise RMS is calculated removing DC, fundamental and harmonic bins, along with their adjacent twos (3 bins removed per harmonic).
 
 All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + interconnect + STM32 ADC.
 
@@ -250,7 +246,7 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 
 - **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally restricted to 8-bit resolution in an attempt to characterize its specific baseline performance. Increasing the DAC's code resolution would hypothetically reduce its quantization noise, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC, which specifies an ENOB of up to 10.2 bits under specific datasheet conditions. However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain below the ADC's noise floor. Therefore, it would be ideal to develop a separate testbench to evaluate the independent performance of each component, thus validating the assumptions regarding the former statement and the ones that follow.
 
-- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. There's also an issue to be investigated related to unpredicted noise around the fundamental.
+- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. There's also an issue to be investigated related to unpredicted noise around the fundamental. Also, thanks to the passive RC filter, good improvement can be seen especially at higher frequencies, where the phase increments of the DDS spurious frequencies affect the system more and the reconstruction filter works like it's intended to. 
 
 - **System-Level vs. Component-Level Characterization**: Without a suitable "golden reference", the individual contributions of the ADC and DAC cannot be independently isolated. Therefore, this experiment is closer to characterizing the cascade performance of the entire signal chain rather than the independent performance of each component. Nevertheless, it can provide an indicative estimate of the DAC's performance at 8-bit resolution.
 
