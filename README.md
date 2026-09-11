@@ -164,9 +164,9 @@ Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed 
 
 The waveform generator uses a 32-bit Direct Digital Synthesis (DDS) architecture reading from synthesizable inferred ROM lookup tables (256 samples × 8-bit), without vendor IP cores or `.coe` files.
 
-The logic behind this is simple: instead of an 8-bit phase accumulator, we use 32 bits with fixed-point arithmetic (`UQ8.24`). The top 8 bits (integer part) index the 256 samples in the ROM, while the lower 24 bits accumulate the decimal phase step at each update. Adding a decimal step allows generating precise frequencies without drift.
+The logic behind this is simple: instead of an 8-bit phase accumulator, we use 32 bits with fixed-point arithmetic. The top 8 bits (integer part) index the 256 samples in the ROM, while the lower 24 bits accumulate the decimal phase increment at each update. Adding a decimal step allows generating precise frequencies without drift.
 
-Each DAC serial frame takes 42 clock cycles at 100 MHz (9 cycles inter-frame SYNC delay + 1 cycle transition + 32 serial clock cycles for 16 bits), giving a DAC update rate of:
+Each DAC serial frame takes 42 clock cycles at 100 MHz (100 ns (10 cycles) inter-frame SYNC delay as imposed by DAC7311 datasheet + 32 serial clock cycles for 16 bits), giving a DAC update rate of:
 
 $$f_s = \frac{100\text{ MHz}}{42} \approx 2.380952\text{ MSPS}$$
 
@@ -230,6 +230,7 @@ where:
 - Noise RMS is calculated removing DC, fundamental and harmonic bins, along with their adjacent twos (3 bins removed per harmonic).
 
 All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + interconnect + STM32 ADC.
+**NOTE** : this metrics refer to previous measurements with high spectral leakage around the fundamental due to low frequency precision: this has been fixed and new measurements shall be done shortly. Also a 4th order Sallen-Key filter has been developed and will be documented and used to retake measurements in a future update. 
 
 ### Results WITHOUT reconstruction filter (sine wave, $f_s = 500$ kSPS, 10 periods per record)
 
@@ -261,7 +262,7 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 
 - **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally restricted to 8-bit resolution in an attempt to characterize its specific baseline performance. Increasing the DAC's code resolution would hypothetically reduce its quantization noise, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC, which specifies an ENOB of up to 10.2 bits under specific datasheet conditions. However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain below the ADC's noise floor. Therefore, it would be ideal to develop a separate testbench to evaluate the independent performance of each component, thus validating the assumptions regarding the former statement and the ones that follow.
 
-- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. There's also an issue to be investigated related to unpredicted noise around the fundamental. Also, thanks to the passive RC filter, good improvement can be seen especially at higher frequencies, where the phase increments of the DDS spurious frequencies affect the system more and the reconstruction filter works like it's intended to. 
+- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. Also, thanks to the passive RC filter, good improvement can be seen especially at higher frequencies, where the phase increments of the DDS spurious frequencies affect the system more and the reconstruction filter works like it's intended to. There was a previous issue related to spectral leakage around the fundamental. This has been fixed, since thanks to 32 bits phase accumulator a higher precision in frequency has been achieved. **NEW MEASUREMENTS STILL NEED TO BE TAKEN**.
 
 - **System-Level vs. Component-Level Characterization**: Without a suitable "golden reference", the individual contributions of the ADC and DAC cannot be independently isolated. Therefore, this experiment is closer to characterizing the cascade performance of the entire signal chain rather than the independent performance of each component. Nevertheless, it can provide an indicative estimate of the DAC's performance at 8-bit resolution.
 
