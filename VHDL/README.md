@@ -1,9 +1,11 @@
 # VHDL/ — FPGA DDS Waveform Generator (Xilinx Spartan-7, SEA board)
 
-Fully custom VHDL DDS that reads 256×8-bit waveform lookup tables from Block
-RAM and streams samples to a TI DAC7311 over a 3-wire serial interface, while
-outputting a 500 kHz trigger for the STM32 ADC (EXTI11). Vendor IP is used
-only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
+Fully custom VHDL DDS that reads 256×8-bit waveform lookup tables from synthesizable
+inferred ROMs and streams samples to a TI DAC7311 over a 3-wire serial interface, while
+outputting a 500 kHz trigger for the STM32 ADC (EXTI11). Fully custom, synthesizable VHDL
+with no vendor IP cores or `.coe` files.
+
+> **Quick Links**: [VHDL Source Code (src/DAC.vhd)](src/DAC.vhd) | [Timing/Pin Constraints (constraints/)](constraints/constraints.xdc) | [Pre-built Bitstream (DAC.bit)](DAC.bit)
 
 ## Ports
 
@@ -20,14 +22,13 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 
 ## Implementation
 
-- **Waveform ROMs** : three BRAM IP cores (`ROM_Sin`, `ROM_trig`, `ROM_saw`),
-  256 entries × 8 bit, initialized from MATLAB-generated `.coe` files. All
-  three are read in parallel with the same address; a MUX selects the output.
-- **Phase accumulator / frequency control** : `addr_reg` is incremented by the
-  step `addr_mask` at the end of every serial frame. `SELECT1`
-  doubles the step (1→2→…→128→1): output frequency = `f_update · step / 256`,
-  i.e. ≈ 1/2/4/8 kHz; the same frequencies used in the measurement campaign.
-  Step > 1 trades time resolution for frequency (amplitude resolution unchanged).
+- **Waveform ROMs** : three inferred ROM tables (`sin_data`, `trig_data`, `saw_data`),
+  256 entries × 8 bit defined directly in VHDL as synthesizable arrays.
+  A multiplexer selects the active waveform based on the selected mode.
+- **Phase accumulator / frequency control** : 32-bit phase accumulator with fixed-point
+  arithmetic (`UQ8.24`). The top 8 bits index the 256 ROM samples (integer part),
+  while the lower 24 bits accumulate the decimal phase step on each frame.
+  The tuning word for 1000 Hz is $M = 1\,803\,886$.
 - **Waveform select** : 2-bit mode counter incremented with 'SELECT2': `00` sine, `01` triangle,
   `11` sawtooth; the unused state safely defaults to sine. 
 - **DAC7311 serial interface** : 2-state FSM (`WAIT_FOR_SYNC`, `DATA_MOVING`).
@@ -45,18 +46,15 @@ only for the three BRAM ROMs; everything else is custom, synthesizable VHDL.
 | System clock | 100 MHz |
 | DAC serial clock | 50 MHz |
 | Serial frame | 16 bits|
-| Base output frequency (step = 1) | ≈ 1 kHz |
+| Output frequency | 1000.00 Hz (M = 1803886) |
 | Trigger period |(500 kHz) |
 
 ## Build & program
 
 1. Open `DAConSEA.xpr` in Vivado (≥ 2019.1, Spartan-7).
-2. If IP was not committed regenerated: right-click BRAM IPs → *Reset Output
-   Products* → *Generate Output Products*.
-3. Regenerate `.coe` tables if needed (256 points, 8 bit, see `coe/`).
-4. Run synthesis → implementation → generate bitstream; program the SEA board.
-5. To load the bitstream to the SEA board see https://github.com/Pillar1989/spartan-edge-esp32-boot and https://www.digikey.de/en/product-highlight/s/seeed/spartan-edge-accelerator-board-resources
-6. Pin assignments: see `constraints/*.xdc`.
+2. Run synthesis → implementation → generate bitstream; program the SEA board.
+3. To load the bitstream to the SEA board see https://github.com/Pillar1989/spartan-edge-esp32-boot and https://www.digikey.de/en/product-highlight/s/seeed/spartan-edge-accelerator-board-resources
+4. Pin assignments: see `constraints/*.xdc`.
 
 ## Design notes
 

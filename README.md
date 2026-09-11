@@ -1,9 +1,9 @@
 # STM32 + FPGA + DAC7311 — 500 kSPS Acquisition & Analysis Pipeline
 
 Acquisition pipeline built around an STM32 Nucleo-C031C6 and a Spartan-7
-SEA/FPGA board. The FPGA design is developed in Vivado as fully custom VHDL
-(vendor IP limited to the BRAMs storing the MATLAB-generated `.coe` waveform
-tables): it drives a TI DAC7311, used at 8-bit code resolution, to generate
+SEA/FPGA board. The FPGA design is developed in Vivado as fully custom,
+synthesizable VHDL (inferred ROMs, no vendor IP cores or external `.coe` files):
+it drives a TI DAC7311, used at 8-bit code resolution, to generate
 sine, triangle and sawtooth waveforms and provides a 500 kHz trigger that
 hardware-triggers the STM32 ADC via EXTI line 11.
 
@@ -29,10 +29,9 @@ aliasing artifacts in the sampled data.
 - Firmware written entirely bare-metal (no HAL): register-level programming using
   only the official reference manuals and the CMSIS libraries, running at 48 MHz;
 - FPGA design developed entirely in Vivado for the Xilinx Spartan-7 (SEA board):
-  vendor IP blocks used only for the BRAMs; everything else is fully custom,
-  synthesizable VHDL, carried through synthesis and implementation down to a
-  working bitstream;
-- .coe and MATLAB script stored in `data/` for reproducibility.
+  fully custom, synthesizable VHDL with inferred ROMs (no vendor IP blocks or `.coe` files),
+  carried through synthesis and implementation down to a working bitstream;
+- MATLAB script stored in `data/` for waveform verification.
 
 ```mermaid
 flowchart LR
@@ -65,7 +64,7 @@ flowchart LR
 ├── firmware/                     # bare-metal STM32C0 (ADC, DMA, EXTI, UART, FSM)
 ├── VHDL/                         # SEA board: DDS + 500 kHz trigger
 ├── labview/                      # VISA receiver + analysis VI
-├── data/                         # (.COE & MATLAB script)
+├── data/                         # (MATLAB script)
 ```
 
 ## Requirements (reproducibility)
@@ -82,7 +81,7 @@ flowchart LR
 
 - STM32CubeIDE (developed and tested with v1.19.0);
 - Xilinx Vivado ≥ 2019.1 (Spartan-7 toolchain);
-- MATLAB or equivalent, to generate the `.coe` waveform files for the BRAMs;
+- MATLAB or equivalent, to run waveform generation/verification scripts;
 - LabVIEW ≥ 2021 SP1;
 - Links to reference documentation (placed in the appropriate folder of this repo):
   RM0490, UM2953, STM32C031 datasheet, TI DAC7311 datasheet, ARM Cortex-M0+ user guide.
@@ -160,6 +159,22 @@ acquisition channel is PA1 / CH1.
 <img width="1913" height="870" alt="8kz_filter_vs_nofilter" src="https://github.com/user-attachments/assets/1cb1fb78-57a8-47f6-adc0-b0a2d8001ad3" />
 
 Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed on CH2; common ground via breadboard. The scope displays the DAC-generated sine wave acquired by the pipeline comparing filtered (yellow) and unfiltered (blue) at 8 kHz.
+
+## FPGA DDS & Fixed-Point Frequency Generation
+
+The waveform generator uses a 32-bit Direct Digital Synthesis (DDS) architecture reading from synthesizable inferred ROM lookup tables (256 samples × 8-bit), without vendor IP cores or `.coe` files.
+
+The logic behind this is simple: instead of an 8-bit phase accumulator, we use 32 bits with fixed-point arithmetic (`UQ8.24`). The top 8 bits (integer part) index the 256 samples in the ROM, while the lower 24 bits accumulate the decimal phase step at each update. Adding a decimal step allows generating precise frequencies without drift.
+
+Each DAC serial frame takes 42 clock cycles at 100 MHz (9 cycles inter-frame SYNC delay + 1 cycle transition + 32 serial clock cycles for 16 bits), giving a DAC update rate of:
+
+$$f_s = \frac{100\text{ MHz}}{42} \approx 2.380952\text{ MSPS}$$
+
+To generate exactly $f_{\text{out}} = 1000.00\text{ Hz}$, the 32-bit tuning word $M$ is calculated as:
+
+$$M = \text{round}\left( \frac{f_{\text{out}} \cdot 42 \cdot 2^{32}}{f_{\text{clk}}} \right) = \text{round}\left( \frac{1000 \cdot 42 \cdot 4\,294\,967\,296}{100\,000\,000} \right) = 1\,803\,886$$
+
+With $M = 1\,803\,886$, the effective output frequency is $999.99985\text{ Hz}$ (error $< 0.0002\text{ Hz}$), preventing phase drift and eliminating spectral leakage.
 
 ## How to run
 
