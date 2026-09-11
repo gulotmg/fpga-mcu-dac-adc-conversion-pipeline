@@ -43,17 +43,13 @@ title('Sine Wave Sampled Values');
 xlabel('Sample Index');
 ylabel('Amplitude');
 fid = fopen('coefficients_sin.txt','w');
-fprintf(fid,'memory_initialization_radix = 10;\nmemory_initialization_vector =\n('); % I left this like this just in case
-                                                                                     % you still want to use .coe, just use 
-                                                                                     % commented for loop syntax. In that case 
-                                                                                     % remove the final '(' here.
+fprintf(fid,'memory_initialization_radix = 10;\nmemory_initialization_vector =\n('); 
+
 for i = 1:samples
     if i == samples
         fprintf(fid,'%d);', y(i));
-        %fprintf(fid,'%d;', y(i));
     else
         fprintf(fid,'%d, ', y(i));
-        %fprintf(fid,'%d,', y(i));
     end
     if mod(i,16)==0, fprintf(fid,'\n'); end
 end
