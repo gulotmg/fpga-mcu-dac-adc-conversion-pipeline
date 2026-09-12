@@ -265,6 +265,7 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 - ARM Cortex-M0+ user guide
 - Spartan 7 datasheet
 - Spartan Edge Accelerator (SEA) user and experimental manuals and schematics
+- 1241-2023 - IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters
 
 ## License
 
