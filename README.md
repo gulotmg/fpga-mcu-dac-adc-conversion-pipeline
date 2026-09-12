@@ -230,7 +230,7 @@ where:
 
 All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + interconnect + STM32 ADC.
 
-**VERY IMPORTANT NOTE** : previous metrics predicted ENOB at 1 kHz of around 8.7 bits. Considering the fact that the DAC is working at 8 bit resolution, that was not explicable without making very exotic assumptions. A better look at "IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters", showed the previous error: not enough harmonic distorsion was selected in LabVIEW to calculate SINAD, which requires *ALL* of it. Similarly THD requires only 10 harmonics to prevent noise to influence its value. Also a 4th order Sallen-Key filter has been developed and will be documented and used to retake measurements in a future update. At last, results without reconstruction filter have been removed since the standard also suggests to low pass filter the sine input used to calculate the parameters.
+**VERY IMPORTANT NOTE** : previous metrics predicted ENOB at 1 kHz of around 8.7 bits. Considering the fact that the DAC is working at 8 bit resolution, that was not explicable without making very exotic assumptions. A better look at "IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters", showed the previous error: not enough harmonic distorsion was selected in LabVIEW to calculate SINAD, which requires *ALL* of it. Similarly THD requires only 10 harmonics to prevent noise to influence its value. Also a 4th order Sallen-Key filter has been developed and will be documented and used to retake measurements in a future update. At last, results without reconstruction filter have been removed since the standard also suggests to low pass filter the sine input used to calculate the parameters; the comparative analysis had little weight in this context.
 
 ### Results WITH reconstruction filter (sine wave, $f_s = 500$ kSPS, 10 periods per record)
 
@@ -241,8 +241,7 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 | 1250 | 4 | 65.8103 | 55.2023 | 38.7729 | −40.5015 | 6.1483 |
 | 625  | 8 | 61.1062 | 50.9321 | 31.1176 | −31.4076 | 4.8767 |
 
-
-<img width="1312" height="711" alt="Screenshot 2026-09-10 190328" src="https://github.com/user-attachments/assets/a575064b-b9e2-42a9-9b86-6d5b6550eeed" />
+<img width="1713" height="872" alt="1kHz" src="https://github.com/user-attachments/assets/bb08080a-b5fe-4c09-8068-be53e38861e8" />
 
 *Image of "Front Panel" for filtered DAC generated 1kHz sinewave*
 
