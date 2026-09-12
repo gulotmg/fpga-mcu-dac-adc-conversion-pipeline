@@ -48,3 +48,7 @@ redistributed in this repository.
   Core-level documentation for the Cortex-M0+: programmers model,
   exception/NVIC behavior, power management (`WFI`) and instruction set,
   used for the bare-metal firmware development.
+
+## 1241-2023 - IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters
+
+-https://ieeexplore.ieee.org/document/10269815
