@@ -2,8 +2,8 @@
 
 Acquisition pipeline built around an STM32 Nucleo-C031C6 and a Spartan-7
 SEA/FPGA board. The FPGA design is developed in Vivado as fully custom,
-synthesizable VHDL (inferred ROMs, no vendor IP cores or external `.coe` files):
-it drives a TI DAC7311, used at 8-bit code resolution, to generate
+synthesizable VHDL.
+The FPGA drives a TI DAC7311, used at 8-bit code resolution, to generate
 sine, triangle and sawtooth waveforms and provides a 500 kHz trigger that
 hardware-triggers the STM32 ADC via EXTI line 11.
 
