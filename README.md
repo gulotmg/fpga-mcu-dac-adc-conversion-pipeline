@@ -156,9 +156,9 @@ acquisition channel is PA1 / CH1.
 
 <img width="3000" height="3845" alt="setup" src="https://github.com/user-attachments/assets/a812bb3d-46ba-4023-a341-53b28e78e17b" />
 
-<img width="1913" height="870" alt="8kz_filter_vs_nofilter" src="https://github.com/user-attachments/assets/1cb1fb78-57a8-47f6-adc0-b0a2d8001ad3" />
+<img width="1897" height="847" alt="filtvsnofilt" src="https://github.com/user-attachments/assets/a9603f6c-c305-4569-9585-17a794f3302e" />
 
-Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed on CH2; common ground via breadboard. The scope displays the DAC-generated sine wave acquired by the pipeline comparing filtered (yellow) and unfiltered (blue) at 8 kHz.
+Test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed on CH2; common ground via breadboard. The scope displays the DAC-generated sine wave acquired by the pipeline comparing filtered (blue) and unfiltered (yellow) at 8 kHz.
 
 ## FPGA DDS & Fixed-Point Frequency Generation
 
@@ -206,18 +206,17 @@ frequencies (10 periods per record in every case):
 | 2500 | 2  | 10 |
 | 5000 | 1  | 10 |
 
-For each acquisition, up to **15 harmonics** are extracted, when possible
-(i.e., while they fall below the Nyquist frequency $f_s/2$).
+For each acquisition, all available harmonics (i.e., while they fall below the Nyquist frequency $f_s/2$) are extracted in order to calculate NAD (noise and distorsion) and 10 are extracted in order to calculate THD (total harmonic distorsion).
 
-### Performance metrics and comparison of system with and without reconstruction filter
+### Performance metrics of system with reconstruction filter
 
 $$\mathrm{SNR} = 20 \log_{10}\left(\frac{V_{fund}}{V_{noise,\mathrm{rms}}}\right) \quad [\mathrm{dB}]$$
 
 $$\mathrm{SFDR} = 20 \log_{10}\left(\frac{V_{fund}}{V_{spur,\mathrm{max}}}\right) \quad [\mathrm{dB}]$$
 
-$$\mathrm{SINAD} = 20 \log_{10}\left(\frac{V_{fund}}{\sqrt{\sum_{h=2}^{15} V_{h}^{2} + V_{noise,\mathrm{rms}}^{2}}}\right) \quad [\mathrm{dB}]$$
+$$\mathrm{SINAD} = 20 \log_{10}\left(\frac{V_{fund}}{\sqrt{\sum_{h=2}^{N} V_{h}^{2} + V_{noise,\mathrm{rms}}^{2}}}\right) \quad [\mathrm{dB}]$$
 
-$$\mathrm{THD} = 20 \log_{10}\left(\frac{\sqrt{\sum_{h=2}^{15} V_{h}^{2}}}{V_{fund}}\right) \quad [\mathrm{dB}]$$
+$$\mathrm{THD} = 20 \log_{10}\left(\frac{\sqrt{\sum_{h=2}^{10} V_{h}^{2}}}{V_{fund}}\right) \quad [\mathrm{dB}]$$
 
 $$\mathrm{ENOB} = \frac{\mathrm{SINAD} - 1.76}{6.02} \quad [\mathrm{bit}]$$
 
@@ -226,43 +225,35 @@ where:
 - $V_{fund}$ : RMS amplitude of the fundamental at $f_{sig}$;
 - $V_{noise,\mathrm{rms}}$ : RMS noise floor, excluding the fundamental and the extracted harmonics;
 - $V_{spur,\mathrm{max}}$ : RMS amplitude of the largest spurious component;
-- $V_{h}$ : RMS amplitude of the $h$-th harmonic, $h = 2 \dots 15$;
+- $V_{h}$ : RMS amplitude of the $h$-th harmonic, $h = 2 \dots N$;
 - Noise RMS is calculated removing DC, fundamental and harmonic bins, along with their adjacent twos (3 bins removed per harmonic).
 
 All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + interconnect + STM32 ADC.
-**NOTE** : this metrics refer to previous measurements with high spectral leakage around the fundamental due to low frequency precision: this has been fixed and new measurements shall be done shortly. Also a 4th order Sallen-Key filter has been developed and will be documented and used to retake measurements in a future update. 
 
-### Results WITHOUT reconstruction filter (sine wave, $f_s = 500$ kSPS, 10 periods per record)
-
-| $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
-|---|---|---|---|---|---|---|
-| 5000 | 1 | 62.0919 | 33.5177 | 51.3887 | −51.7748 | 8.7349 |
-| 2500 | 2 | 57.9371 | 32.6168 | 49.1370 | −49.7509 | 7.8699 |
-| 1250 | 4 | 52.1852 | 32.8241 | 37.5271 | −37.6783 | 5.9413 |
-| 625  | 8 | 48.4174 | 32.0512 | 27.9024 | −27.9411 | 4.3425 |
+**VERY IMPORTANT NOTE** : previous metrics predicted ENOB at 1 kHz of around 8.7 bits. Considering the fact that the DAC is working at 8 bit resolution, that was not explicable without making very exotic assumptions. A better look at "IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters", showed the previous error: not enough harmonic distorsion was selected in LabVIEW to calculate SINAD, which requires *ALL* of it. Similarly THD requires only 10 harmonics to prevent noise to influence its value. Also a 4th order Sallen-Key filter has been developed and will be documented and used to retake measurements in a future update. At last, results without reconstruction filter have been removed since the standard also suggests to low pass filter the sine input used to calculate the parameters.
 
 ### Results WITH reconstruction filter (sine wave, $f_s = 500$ kSPS, 10 periods per record)
 
 | $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
 |---|---|---|---|---|---|---|
-| 5000 | 1 | 62.2742 | 32.9582 | 55.2627 | −56.2263 | 8.8874 |
-| 2500 | 2 | 59.5863 | 33.4373 | 49.4620 | −49.9060 | 7.9239 |
-| 1250 | 4 | 55.9347 | 33.1833 | 43.1892 | −43.4264 | 6.8819 |
-| 625  | 8 | 52.4061 | 32.3766 | 34.3292 | −34.3974 | 5.4101 |
+| 5000 | 1 | 71.4870 | 60.2496 | 44.4503 | −52.3189 | 7.0914 |
+| 2500 | 2 | 68.4055 | 57.1823 | 42.9522 | −46.6650 | 6.8426 |
+| 1250 | 4 | 65.8103 | 55.2023 | 38.7729 | −40.5015 | 6.1483 |
+| 625  | 8 | 61.1062 | 50.9321 | 31.1176 | −31.4076 | 4.8767 |
+
 
 <img width="1312" height="711" alt="Screenshot 2026-09-10 190328" src="https://github.com/user-attachments/assets/a575064b-b9e2-42a9-9b86-6d5b6550eeed" />
 
 *Image of "Front Panel" for filtered DAC generated 1kHz sinewave*
 
-<img width="1393" height="732" alt="1khz_nofilter" src="https://github.com/user-attachments/assets/9d5ece81-790c-4227-9838-7946fc7c1e2a" />
 
-*Image of "Front Panel" for UNfiltered DAC generated 1kHz sinewave*
+- As it can be seen, measurements with respects to previous commits, are more realistic and better reflect the setup that is being described in this repository. Referring to official standards is always the key to correct measurements.
 
 ## Known limitations and interpretation of results
 
 - **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally restricted to 8-bit resolution in an attempt to characterize its specific baseline performance. Increasing the DAC's code resolution would hypothetically reduce its quantization noise, potentially shifting the system's bottleneck to the Nucleo's 12-bit SAR ADC, which specifies an ENOB of up to 10.2 bits under specific datasheet conditions. However, this assumes that the DAC's Total Harmonic Distortion (THD) and non-linearities remain below the ADC's noise floor. Therefore, it would be ideal to develop a separate testbench to evaluate the independent performance of each component, thus validating the assumptions regarding the former statement and the ones that follow.
 
-- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. Also, thanks to the passive RC filter, good improvement can be seen especially at higher frequencies, where the phase increments of the DDS spurious frequencies affect the system more and the reconstruction filter works like it's intended to. There was a previous issue related to spectral leakage around the fundamental. This has been fixed, since thanks to 32 bits phase accumulator a higher precision in frequency has been achieved. **NEW MEASUREMENTS STILL NEED TO BE TAKEN**.
+- **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. Also, thanks to the passive RC filter, good improvement can be seen especially at higher frequencies, where the phase increments of the DDS spurious frequencies affect the system more and the reconstruction filter works like it's intended to. There was a previous issue related to spectral leakage around the fundamental. This has been fixed, since thanks to 32 bits phase accumulator a higher precision in frequency has been achieved.
 
 - **System-Level vs. Component-Level Characterization**: Without a suitable "golden reference", the individual contributions of the ADC and DAC cannot be independently isolated. Therefore, this experiment is closer to characterizing the cascade performance of the entire signal chain rather than the independent performance of each component. Nevertheless, it can provide an indicative estimate of the DAC's performance at 8-bit resolution.
 
