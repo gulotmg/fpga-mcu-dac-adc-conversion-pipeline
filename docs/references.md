@@ -51,4 +51,4 @@ redistributed in this repository.
 
 ## 1241-2023 - IEEE Standard for Terminology and Test Methods for Analog-to-Digital Converters
 
--https://ieeexplore.ieee.org/document/10269815
+- https://ieeexplore.ieee.org/document/10269815
