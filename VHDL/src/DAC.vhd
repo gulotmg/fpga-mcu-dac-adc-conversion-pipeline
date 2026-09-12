@@ -33,9 +33,9 @@ architecture myDACarch of DAC is
     constant C_DEBOUNCE_LIMIT    : integer := 2**20;
     constant C_DEBOUNCE_THRESH   : integer := 1_000_000;
 
-    -- Interrupt generator timing (100 kHz rate = 1000 cycles, 1 us pulse = 100 cycles)
+    -- Interrupt generator timing (500 kHz rate)
     constant C_INT_BUFFER_LIMIT  : integer := 2**10;
-    constant C_INT_PERIOD_CYCLES : integer := 1000;
+    constant C_INT_PERIOD_CYCLES : integer := 200;
     constant C_INT_PULSE_CYCLES  : integer := 100;
 
     -- ROM & sample dimensions
@@ -220,7 +220,7 @@ begin
                     selected_sample <= sin_data(to_integer(phase_acc(31 downto 24)));
             end case;       
             
-            -- Interrupt generator (100 kHz, 1 us active-low pulse)
+            -- Interrupt generator 
             if (int_counter < C_INT_PERIOD_CYCLES-1) then
                 int_counter <= int_counter + 1;
                 if (int_counter = C_INT_PULSE_CYCLES) then 
