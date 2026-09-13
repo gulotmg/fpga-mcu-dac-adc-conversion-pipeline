@@ -55,78 +55,6 @@ flowchart LR
     EXTI -.->|ADC external trigger| ADC
 ```
 
-
-## Repository structure
-
-```
-├── README.md
-├── docs/                         # links to manuals, references, datasheets
-├── firmware/                     # bare-metal STM32C0 (ADC, DMA, EXTI, UART, FSM)
-├── VHDL/                         # SEA board: DDS + 500 kHz trigger
-├── labview/                      # VISA receiver + analysis VI
-├── data/                         # (MATLAB script)
-```
-
-## Requirements (reproducibility)
-
-**Hardware**
-
-- STM32 Nucleo-C031C6;
-- Seeed Studio SEA accelerator board (Xilinx Spartan-7) with DAC7311;
-- RC reconstruction low-pass filter (see "Hardware setup" below);
-- USB cables, jumper wires, common ground between the two boards;
-- Oscilloscope;
-
-**Software**
-
-- STM32CubeIDE (developed and tested with v1.19.0);
-- Xilinx Vivado ≥ 2019.1 (Spartan-7 toolchain);
-- MATLAB or equivalent, to run waveform generation/verification scripts;
-- LabVIEW ≥ 2021 SP1;
-- Links to reference documentation (placed in the appropriate folder of this repo):
-  RM0490, UM2953, STM32C031 datasheet, TI DAC7311 datasheet, ARM Cortex-M0+ user guide.
-
-## How to clone this repository
-
-### HTTPS (no SSH key required)
-
-```bash
-git clone https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
-cd fpga-mcu-dac-adc-conversion-pipeline
-```
-
-### SSH (recommended if you already have an SSH key configured on GitHub)
-
-```bash
-git clone git@github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
-cd fpga-mcu-dac-adc-conversion-pipeline
-```
-
-### GitHub CLI
-
-```bash
-gh repo clone gulotmg/fpga-mcu-dac-adc-conversion-pipeline
-cd fpga-mcu-dac-adc-conversion-pipeline
-```
-
-### Download as ZIP
-
-If you don't want to use Git, you can download the source code as a ZIP archive:
-
- [Download ZIP](https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline/archive/refs/heads/main.zip)
-
- Repository link: https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline
-
-### After cloning
-
-1. Refer to the **Requirements** section above to install the required toolchains
-   (STM32CubeIDE, Vivado, LabVIEW, MATLAB).
-2. Open `firmware/` in STM32CubeIDE to build and flash the STM32 firmware.
-3. Open `VHDL/` in Vivado to synthesize, implement and program the bitstream on
-   the SEA board.
-4. Open `labview/` in LabVIEW to run the host receiver and analysis VI.
-5. See the **Hardware setup** section below for the exact wiring between the two boards.
-
 ## Hardware setup
 
 | Signal | MCU pin | Connector (UM2953) | Firmware configuration | Note |
@@ -175,15 +103,6 @@ To generate exactly $f_{\text{out}} = 1000.00\text{ Hz}$, the 32-bit tuning word
 $$M = \text{round}\left( \frac{f_{\text{out}} \cdot 42 \cdot 2^{32}}{f_{\text{clk}}} \right) = \text{round}\left( \frac{1000 \cdot 42 \cdot 4\,294\,967\,296}{100\,000\,000} \right) = 1\,803\,886$$
 
 With $M = 1\,803\,886$, the effective output frequency is $999.99985\text{ Hz}$ (error $< 0.0002\text{ Hz}$), preventing phase drift and eliminating spectral leakage.
-
-## How to run
-
-1. Flash the firmware and power the Nucleo.
-2. Power the SEA board, program the FPGA bitstream following the instructions
-   in `VHDL/`, and connect the boards according to the pinout described above.
-3. Open the LabVIEW VI, select the COM port and the baud rate, and run the VI.
-4. Press the Nucleo reset button: the board acquires 5000 samples and transmits
-   the buffer; LabVIEW plots and analyzes it.
 
 ## Measurement methodology
 
@@ -255,6 +174,64 @@ All metrics refer to the **complete chain**: DAC7311 + reconstruction filter + i
 - **Frequency-Dependent Performance and Phase Increment**: Under these conditions, the DAC is highly likely to be the primary bottleneck for the system's overall performance. As signal degradation becomes more pronounced at higher frequencies, the primary limiting factor in this specific implementation is plausibly the "Phase Increment" logic defined in the VHDL entity. Also, thanks to the passive RC filter, good improvement can be seen especially at higher frequencies, where the phase increments of the DDS spurious frequencies affect the system more and the reconstruction filter works like it's intended to. There was a previous issue related to spectral leakage around the fundamental. This has been fixed, since thanks to 32 bits phase accumulator a higher precision in frequency has been achieved.
 
 - **System-Level vs. Component-Level Characterization**: Without a suitable "golden reference", the individual contributions of the ADC and DAC cannot be independently isolated. Therefore, this experiment is closer to characterizing the cascade performance of the entire signal chain rather than the independent performance of each component. Nevertheless, it can provide an indicative estimate of the DAC's performance at 8-bit resolution.
+
+## Repository structure
+
+```
+├── README.md
+├── docs/                         # links to manuals, references, datasheets
+├── firmware/                     # bare-metal STM32C0 (ADC, DMA, EXTI, UART, FSM)
+├── VHDL/                         # SEA board: DDS + 500 kHz trigger
+├── labview/                      # VISA receiver + analysis VI
+├── data/                         # (MATLAB script)
+```
+
+## Requirements (reproducibility)
+
+**Hardware**
+
+- STM32 Nucleo-C031C6;
+- Seeed Studio SEA accelerator board (Xilinx Spartan-7) with DAC7311;
+- RC reconstruction low-pass filter (see "Hardware setup" above);
+- USB cables, jumper wires, common ground between the two boards;
+- Oscilloscope;
+
+**Software**
+
+- STM32CubeIDE (developed and tested with v1.19.0);
+- Xilinx Vivado ≥ 2019.1 (Spartan-7 toolchain);
+- MATLAB or equivalent, to run waveform generation/verification scripts;
+- LabVIEW ≥ 2021 SP1;
+- Links to reference documentation (placed in the appropriate folder of this repo):
+  RM0490, UM2953, STM32C031 datasheet, TI DAC7311 datasheet, ARM Cortex-M0+ user guide.
+
+## How to clone this repository
+
+```bash
+git clone https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git
+cd fpga-mcu-dac-adc-conversion-pipeline
+```
+
+*(Alternatively, via SSH: `git clone git@github.com:gulotmg/fpga-mcu-dac-adc-conversion-pipeline.git` or download the [ZIP archive](https://github.com/gulotmg/fpga-mcu-dac-adc-conversion-pipeline/archive/refs/heads/main.zip)).*
+
+### After cloning
+
+1. Refer to the **Requirements** section above to install the required toolchains
+   (STM32CubeIDE, Vivado, LabVIEW, MATLAB).
+2. Open `firmware/` in STM32CubeIDE to build and flash the STM32 firmware.
+3. Open `VHDL/` in Vivado to synthesize, implement and program the bitstream on
+   the SEA board.
+4. Open `labview/` in LabVIEW to run the host receiver and analysis VI.
+5. See the **Hardware setup** section above for the exact wiring between the two boards.
+
+## How to run
+
+1. Flash the firmware and power the Nucleo.
+2. Power the SEA board, program the FPGA bitstream following the instructions
+   in `VHDL/`, and connect the boards according to the pinout described above.
+3. Open the LabVIEW VI, select the COM port and the baud rate, and run the VI.
+4. Press the Nucleo reset button: the board acquires 5000 samples and transmits
+   the buffer; LabVIEW plots and analyzes it.
 
 ## References
 

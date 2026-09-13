@@ -2,10 +2,10 @@
 
 Fully custom VHDL DDS that reads 256×8-bit waveform lookup tables from synthesizable
 inferred ROMs and streams samples to a TI DAC7311 over a 3-wire serial interface, while
-outputting a 500 kHz trigger for the STM32 ADC (EXTI11). Fully custom, synthesizable VHDL
-with no vendor IP cores or `.coe` files.
+outputting a 500 kHz trigger for the STM32 ADC (EXTI11). 
 
-> **Quick Links**: [VHDL Source Code (src/DAC.vhd)](src/DAC.vhd) | [Timing/Pin Constraints (constraints/)](constraints/constraints.xdc) | [Pre-built Bitstream (DAC.bit)](DAC.bit)
+
+> **Quick Links**: [VHDL Source Code (src/DAC.vhd)](DAConSEA.srcs/src/DAC.vhd) | [Timing/Pin Constraints (constraints/)](DAConSEA.srcs/constraints/constraints.xdc) | [Pre-built Bitstream (DAC.bit)](DAC.bit) | [Test Bench (tb_DAC.vhd)](DAConSEA.srcs/sim/tb_DAC.vhd)
 
 ## Ports
 
@@ -32,9 +32,8 @@ with no vendor IP cores or `.coe` files.
 - **Waveform select** : 2-bit mode counter incremented with 'SELECT2': `00` sine, `01` triangle,
   `11` sawtooth; the unused state safely defaults to sine. 
 - **DAC7311 serial interface** : 2-state FSM (`WAIT_FOR_SYNC`, `DATA_MOVING`).
-  inter-frame gap with SYNC high, then SYNC low and 16 bits shifted
-  MSB first: `DIN` updated while SCLK high, shifted on SCLK low (DAC latches
-  on the falling edge).
+  inter-frame delay with SYNC high (in accordance to datasheet), then SYNC low and 16 bits shifted
+  MSB first: `DIN` updated while SCLK high, shifted on SCLK low.
 - **500 kHz trigger** : simply achieved by a counter.
 - **Reset / buttons** : ~20 ms counter-based debouncing; reset restores FSM,
   accumulator, step and counters.
@@ -46,7 +45,7 @@ with no vendor IP cores or `.coe` files.
 | System clock | 100 MHz |
 | DAC serial clock | 50 MHz |
 | Serial frame | 16 bits|
-| Output frequency | 1000.00 Hz (M = 1803886) |
+| Output frequency | 1000.00 Hz (M = 1803886) and multiples |
 | Trigger period |(500 kHz) |
 
 ## Build & program

@@ -1,0 +1,53 @@
+# =========================================================================
+# Vivado Project & Run Artifacts
+# =========================================================================
+# Temporary run directories and logs
+.Xil/
+*.runs/
+*.cache/
+*.hw/
+*.sim/
+*.ip_user_files/
+
+# Vivado log and journal files
+vivado*.log
+vivado*.jou
+vivado*.str
+vivado_pid*.str
+vivado_*.backup.*
+dfx_runtime.txt
+webtalk*.xml
+webtalk*.log
+
+# Simulation temporary files
+xsim.dir/
+*.wdb
+*.pb
+*.vcd
+*.wcfg.bak
+
+# Whitelist all source files in srcs
+!*.srcs/**
+
+# =========================================================================
+# STM32CubeIDE Build Output
+# =========================================================================
+Debug/
+Release/
+*.o
+*.d
+*.su
+*.cyclo
+*.elf
+*.bin
+*.map
+*.hex
+
+# =========================================================================
+# OS & Editor generated files
+# =========================================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~

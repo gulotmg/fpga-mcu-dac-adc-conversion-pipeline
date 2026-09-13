@@ -20,7 +20,7 @@ entity DAC is
         DAC_DIN          : out STD_LOGIC; -- Serial data out to DAC
         DAC_CLK          : out STD_LOGIC; -- Serial clock to DAC
         DAC_SYNC         : out STD_LOGIC; -- Active-low frame synchronization
-        INT_PIN          : out STD_LOGIC  -- FPGA_GPIO pin to generate interrupt for ADC
+        INT_PIN          : out STD_LOGIC:='0'  -- FPGA_GPIO pin to generate interrupt for ADC
     );
 end DAC;
 
@@ -33,9 +33,9 @@ architecture myDACarch of DAC is
     constant C_DEBOUNCE_LIMIT    : integer := 2**20;
     constant C_DEBOUNCE_THRESH   : integer := 1_000_000;
 
-    -- Interrupt generator timing (100 kHz rate = 1000 cycles, 1 us pulse = 100 cycles)
+    -- Interrupt generator timing (500 kHz rate)
     constant C_INT_BUFFER_LIMIT  : integer := 2**10;
-    constant C_INT_PERIOD_CYCLES : integer := 1000;
+    constant C_INT_PERIOD_CYCLES : integer := 200;
     constant C_INT_PULSE_CYCLES  : integer := 100;
 
     -- ROM & sample dimensions
@@ -220,7 +220,7 @@ begin
                     selected_sample <= sin_data(to_integer(phase_acc(31 downto 24)));
             end case;       
             
-            -- Interrupt generator (100 kHz, 1 us active-low pulse)
+            -- Interrupt generator 
             if (int_counter < C_INT_PERIOD_CYCLES-1) then
                 int_counter <= int_counter + 1;
                 if (int_counter = C_INT_PULSE_CYCLES) then 
@@ -232,8 +232,10 @@ begin
             end if;
            
             -- Transmission State Machine
-            case (state) is 
+            case (state) is
+                 
                 when WAIT_FOR_SYNC => 
+
                     if (buffer_t9 < C_SYNC_DELAY_CYCLES) then
                         buffer_t9 <= buffer_t9 + 1;
                     else
@@ -265,6 +267,7 @@ begin
                             -- with the first 8 bits (integer part), if we sum a decimal part we can achieve basically any allowed frequency.
                    
                             phase_acc <= phase_acc + phase_inc;
+                            
                         end if;  
                     end if;
             end case;
