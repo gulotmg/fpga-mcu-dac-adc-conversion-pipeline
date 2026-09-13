@@ -1,0 +1,8 @@
+"./Src/DMA.o"
+"./Src/adc.o"
+"./Src/extiADC.o"
+"./Src/main.o"
+"./Src/syscalls.o"
+"./Src/sysmem.o"
+"./Src/uart.o"
+"./Startup/startup_stm32c031c6tx.o"
