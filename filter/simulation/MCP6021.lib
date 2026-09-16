@@ -1,0 +1,89 @@
+﻿.subckt mcp6021 1 2 3 4 5
+*               | | | | |
+*               | | | | output
+*               | | | negative supply
+*               | | positive supply
+*               | inverting input
+*               non-inverting input
+*
+* macromodel for the mcp6021/2/3/4 op amp family:
+* mcp6021 (single)
+* mcp6022 (dual)
+* mcp6023 (single w/ cs; chip select is not modeled)
+* mcp6024 (quad)
+* revision history:
+* rev a: 10-02-01 created keb
+* recommendations:
+* use pspice (or spice 2g6; other simulators may require translation)
+* for a quick, effective design, use a combination of: data sheet
+* specs, bench testing, and simulations with this macromodel
+* for high impedance circuits, set gmin=100f in the .options
+* statement
+* supported:
+* typical performance at room temperature (25 degrees c)
+* dc, ac, transient, and noise analyses.
+* most specs, including: offsets, dc psrr, dc cmrr, input impedance,
+* open loop gain, voltage ranges, supply current, ... , etc.
+*
+* not supported:
+* chip select (mcp6023)
+* variation in specs vs. power supply voltage
+* distortion (detailed non-linear behavior)
+* temperature analysis
+* process variation
+* behavior outside normal operating region
+*
+* input stage
+v10 3 10 -0.6
+r10 10 11 1.63k
+r11 10 12 1.63k
+c11 11 12 222f
+c12 1 0 6p
+be12 1 14 v=v(26) +v(27)
+i12 14 0 1.5p
+m12 11 14 15 15 nmi l=2u w=75u
+c13 14 2 3p
+m14 12 2 15 15 nmi l=2u w=75u
+i14 2 0 0.5p
+c14 2 0 6p
+i15 15 4 500u
+v16 16 4 0.36
+d16 16 15 dl
+v13 3 13 -80m
+d13 14 13 dl
+*
+* psrr and cmrr
+bg26 0 26 i=-308e-6 + 56e-6 * v(3, 4) Rpar=1 Cpar=100p
+bg27 0 27 i=(v(1, 3) + v(2, 4)-10)*24e-6 Rpar=1 Cpar=100p
+*
+* open loop gain, slew rate
+* g30 0 30 poly(1) 12 11 0 1k
+bg30 0 30 i=1000 * v(12, 11) Rpar=1 Cpar=100p
+d31 30 31 dl
+be31 31 0 v=57.2 + 8.33 * v(3, 4)
+d32 32 30 dl
+be32 0 32 v=74.0 + 8.00 * v(3, 4)
+bg33 0 33 i=316 * v(30) Rpar=1 Cpar=100p
+c33 33 0 4.58m
+bg34 0 34 i= v(33) Rpar=1 Cpar=100p
+c34 34 0 159p
+*
+* output stage
+bg40 0 40 i=10 * v(47, 5)
+d41 40 41 dl
+r41 41 0 1k
+d42 42 40 dl
+r42 42 0 1k
+bg43 3 0 i=500e-6 + 1e-3 * v(41)
+bg44 0 4 i=500e-6 -1e-3 * v(42)
+d45 47 45 dls
+be45 45 0 v=-20e-3 + v(3) -20.4e-3 * v(41)
+be46 46 0 v=20e-3 + v(4) -20.4e-3 * v(42)
+d46 46 47 dls
+bg47 0 47 i=(v(3) +v(4) + 2 * v(34))*8e-3 Rpar=62.5 Cpar=1p
+r48 47 5 0.1
+c48 5 0 2p
+.model nmi nmos af=1 kf=0.1f
+.model dl d n=1 is=1f cjo=2f
+.model dls d n=10m is=1f
+.ends mcp6021

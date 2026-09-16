@@ -5,3 +5,10 @@ firmware/DMA_nucleoC03_ADC/Startup/** linguist-vendored
 *.dcp linguist-generated
 *.xci linguist-generated
 *.coe linguist-generated
+
+# Exclude KiCad hardware files and LTspice simulations from language statistics
+*.kicad_sch linguist-generated=true
+*.kicad_pcb linguist-generated=true
+*.kicad_prl linguist-generated=true
+*.kicad_pro linguist-generated=true
+*.asc linguist-generated=true
