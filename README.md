@@ -1,11 +1,29 @@
 # STM32 + FPGA + DAC7311 - 500 kSPS Acquisition & Analysis Pipeline
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Acquisition and characterization pipeline built around an STM32 Nucleo-C031C6 and a Spartan-7 SEA/FPGA board. The FPGA design is developed in Vivado as fully custom, synthesizable VHDL. The FPGA drives a TI DAC7311, used at 8-bit code resolution, to generate sine, triangle, and sawtooth waveforms and provides a 500 kHz trigger that hardware-triggers the STM32 ADC via EXTI line 11.
 
 The STM32 firmware is written entirely bare-metal at register level (no HAL), developed in STM32CubeIDE with a 48 MHz system clock: ADC samples are moved by DMA into a 5000-sample buffer and, when the buffer is full, a firmware state machine streams it over UART to a LabVIEW (VISA) host that performs coherent-sampling spectral analysis (SNR / SFDR / SINAD / THD / ENOB) according to IEEE Standard 1241-2023.
 
 A dedicated analog reconstruction front-end is placed between the DAC output and the ADC input to smooth the staircase steps produced by the zero-order-hold (ZOH) DAC, eliminate out-of-band spectral images, and prevent aliasing artifacts. The repository also provides a comparison between a passive RC reconstruction filter and a custom-designed **4th-Order Active Sallen-Key Low-Pass Filter powered by a custom discrete regulator.**
 
+
+## Table of Contents
+
+- [Features](#features)
+- [Hardware Setup](#hardware-setup)
+- [Analog Filter Design](#analog-filter-design)
+- [FPGA DDS & Frequency Generation](#fpga-dds--frequency-generation)
+- [Measurement Methodology](#measurement-methodology)
+- [Experimental Results & Comparative Analysis](#experimental-results--comparative-analysis)
+- [Known Limitations & System Interpretation](#known-limitations--system-interpretation)
+- [To Do](#to-do)
+- [Repository Structure](#repository-structure)
+- [Requirements (Reproducibility)](#requirements-reproducibility)
+- [How to Clone and Run](#how-to-clone-and-run)
+- [References](#references)
+- [License](#license)
 
 ## Features
 
@@ -403,4 +421,5 @@ cd fpga-mcu-dac-adc-conversion-pipeline
 
 ## License
 
-MIT
+This project is licensed under the **MIT License**. You are free to use, modify, and distribute this software in compliance with the license terms.
+
