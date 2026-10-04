@@ -1,10 +1,16 @@
 # STM32 + FPGA + DAC7311 - 500 kSPS Acquisition & Analysis Pipeline
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Hardware: CERN-OHL-P-2.0](https://img.shields.io/badge/Hardware-CERN--OHL--P--2.0-blue.svg)](LICENSE-HARDWARE)
+[![MCU: STM32C031C6](https://img.shields.io/badge/MCU-STM32C031C6-blue.svg)](https://www.st.com/en/microcontrollers-microprocessors/stm32c031c6.html)
+[![FPGA: Spartan-7](https://img.shields.io/badge/FPGA-Spartan--7-red.svg)](https://www.xilinx.com/products/silicon-devices/fpga/spartan-7.html)
+[![PCB: KiCad 10](https://img.shields.io/badge/PCB-KiCad%2010-orange.svg)](https://kicad.org/)
 
 Acquisition and characterization pipeline built around an STM32 Nucleo-C031C6 and a Spartan-7 SEA/FPGA board. The FPGA design is developed in Vivado as fully custom, synthesizable VHDL. The FPGA drives a TI DAC7311, used at 8-bit code resolution, to generate sine, triangle, and sawtooth waveforms and provides a 500 kHz trigger that hardware-triggers the STM32 ADC via EXTI line 11.
 
 The STM32 firmware is written entirely bare-metal at register level (no HAL), developed in STM32CubeIDE with a 48 MHz system clock: ADC samples are moved by DMA into a 5000-sample buffer and, when the buffer is full, a firmware state machine streams it over UART to a LabVIEW (VISA) host that performs coherent-sampling spectral analysis (SNR / SFDR / SINAD / THD / ENOB) according to IEEE Standard 1241-2023.
+
+The system features end-to-end automation: the LabVIEW host coordinates runtime frequency sweeps by sending 32-bit DDS tuning words over UART to the STM32. The STM32 bridges the tuning word to the Spartan-7 FPGA via SPI, re-arms the DMA channel, and triggers the ADC automatically without requiring manual board resets.
 
 A dedicated analog reconstruction front-end is placed between the DAC output and the ADC input to smooth the staircase steps produced by the zero-order-hold (ZOH) DAC, eliminate out-of-band spectral images, and prevent aliasing artifacts. The repository also provides a comparison between a passive RC reconstruction filter and a custom-designed **4th-Order Active Sallen-Key Low-Pass Filter powered by a custom discrete regulator.**
 
@@ -27,6 +33,8 @@ A dedicated analog reconstruction front-end is placed between the DAC output and
 
 ## Features
 
+- **Automated Frequency Sweep**: LabVIEW host coordinates runtime frequency sweeps by transmitting 32-bit tuning words over UART; STM32 updates the FPGA DDS over SPI1 master mode and re-arms DMA/ADC without requiring manual resets;
+- **Runtime SPI Slave DDS Configuration**: Spartan-7 FPGA receives 32-bit tuning words on the fly, updating frequency and phase-aligning the DDS accumulator;
 - **FPGA DDS Engine**: Generates sine / triangle / sawtooth waveforms at 8-bit code resolution with a 32-bit phase accumulator for sub-mHz frequency tuning without spectral leakage;
 - **500 kHz Hardware Trigger**: EXTI line 11 routed internally as the hardware trigger for the STM32 ADC;
 - **12-bit SAR ADC @ 500 kSPS**: DMA-driven circular/linear buffer acquisition (5000 samples);
@@ -42,37 +50,41 @@ A dedicated analog reconstruction front-end is placed between the DAC output and
 
 ```mermaid
 flowchart LR
-    FPGA["FPGA<br/>DDS + 500 kHz trigger"]
+    LABVIEW["LabVIEW Host<br/>Sweep & IEEE 1241 Metrics"]
+    UART["UART Link<br/>PA2 TX / PA3 RX (115200)"]
+    MCU["STM32C031C6<br/>ADC1 + DMA1 + SPI1 Master"]
+    SPI["SPI Bus<br/>PA5 SCK, PA7 MOSI, PA6 CS"]
+    FPGA["Spartan-7 FPGA<br/>DDS + SPI Slave + Trigger"]
     DAC["DAC7311<br/>8-bit"]
     FILTER["Active Sallen-Key Filter<br/>4th-Order / -80 dB/dec"]
     PSU["Discrete Linear PSU<br/>Isolated +5.0 V Rail"]
-    ADC["STM32 ADC<br/>12-bit / 500 kSPS"]
-    DMA["DMA<br/>5000-sample buffer"]
-    UART["UART<br/>115200 baud"]
-    LABVIEW["LabVIEW<br/>FFT and IEEE 1241 Metrics"]
-    EXTI["PA11<br/>EXTI11"]
 
+    LABVIEW -->|4-byte tuning word| UART
+    UART --> MCU
+    MCU -->|32-bit SPI word| SPI
+    SPI --> FPGA
     FPGA -->|8-bit waveform| DAC
+    FPGA -.->|500 kHz trigger| MCU
     DAC -->|Analog staircase| FILTER
     PSU -.->|Clean VDD| FILTER
-    FILTER -->|Smooth analog signal| ADC
-    ADC -->|ADC samples| DMA
-    DMA -->|Full buffer| UART
+    FILTER -->|Smooth analog signal| MCU
+    MCU -->|5000 ADC samples| UART
     UART -->|Serial stream| LABVIEW
-
-    FPGA -.->|500 kHz trigger| EXTI
-    EXTI -.->|ADC hardware trigger| ADC
 ```
 
 
 ## Hardware Setup
 
-| Signal | MCU Pin | Connector (UM2953) | Firmware Configuration | Note |
-|---|---|---|---|---|
-| **DAC7311 Analog Output (Filtered)** | PA1 - ADC_IN1, CH1 | Arduino A1 / morpho 12 | Analog mode; sampling time 12.5 ADC cycles | Signal under test, after reconstruction filter |
-| **500 kHz Trigger (FPGA)** | PA11 - EXTI line 11 | Arduino A4 / morpho 33 | Digital input, pull-down, rising edge; ADC hardware trigger (EXTSEL = 111, EXTEN = 01) | SEA board output |
-| **UART TX → PC** | PA2 - USART2_TX | morpho 13 (VCP, SB27 ON) | AF1, 115200 8N1, BRR computed @ 48 MHz PCLK | One-way telemetry link (RX unused) |
-| **GND** | common | - | - | Shared ground plane between SEA board, PCB filter, and Nucleo |
+| Signal | MCU Pin | Spartan-7 SEA Pin | Connector (UM2953) | Firmware Configuration | Note |
+|---|---|---|---|---|---|
+| **DAC7311 Analog Output (Filtered)** | PA1 - ADC_IN1, CH1 | - | Arduino A1 / morpho 12 | Analog mode; sampling time 12.5 ADC cycles | Signal under test, after reconstruction filter |
+| **500 kHz Trigger (FPGA)** | PA11 - EXTI line 11 | N14 (FPGA_IO0) | Arduino A4 / morpho 33 | Digital input, pull-down, rising edge; ADC hardware trigger (EXTSEL = 111, EXTEN = 01) | SEA board trigger output |
+| **SPI Chip Select** | PA6 | M14 (FPGA_IO1) | morpho 13 / D12 | Push-pull GPIO output, active-low | Software NSS from MCU to FPGA |
+| **SPI Serial Clock** | PA5 - SPI1_SCK | C4 (FPGA_IO2) | morpho 11 / D13 | AF0, SPI1 Master clock | SCLK to FPGA |
+| **SPI MOSI** | PA7 - SPI1_MOSI | B13 (FPGA_IO3) | morpho 15 / D11 | AF0, SPI1 Master simplex transmit | 32-bit tuning word data to FPGA |
+| **UART TX -> PC** | PA2 - USART2_TX | - | morpho 35 (VCP) | AF1, 115200 8N1, BRR computed @ 48 MHz PCLK | Telemetry stream: 5000 ADC samples |
+| **UART RX <- PC** | PA3 - USART2_RX | - | morpho 37 (VCP) | AF1, 115200 8N1, RXNE interrupt enabled | Command reception: 4-byte phase word |
+| **GND** | common | GND | - | - | Shared ground plane between SEA board, PCB filter, and Nucleo |
 
 
 ## Analog Filter Design
@@ -88,10 +100,10 @@ A passive 1st-order RC low-pass filter was initially placed between the DAC7311 
 This cut-off is placed well above the test signal frequencies ($1\text{–}8\text{ kHz}$) and below the $250\text{ kHz}$ Nyquist limit.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/a812bb3d-46ba-4023-a341-53b28e78e17b" alt="Initial Breadboard Setup" width="500"/>
+  <img src="img/breadboard_setup_passive.jpg" alt="Initial Breadboard Setup" width="500"/>
 </p>
 
-![Scope Filter vs No Filter](https://github.com/user-attachments/assets/a9603f6c-c305-4569-9585-17a794f3302e)
+![Scope Filter vs No Filter](img/scope_filtered_vs_unfiltered.png)
 
 *Initial breadboard test bench: Nucleo-C031C6 (left), SEA/FPGA board (right), DAC7311 output probed on CH2; common ground via breadboard. The scope displays the DAC-generated sine wave acquired by the pipeline comparing filtered (blue) and unfiltered (yellow) at 8 kHz.*
 
@@ -141,103 +153,7 @@ While using an off-the-shelf monolithic LDO (such as an LM317, L7805, or LP2985)
 
 #### Sizing, Dimensioning & Thermal Compensation Analysis
 
-The discrete regulator topology was sized and analyzed according to classical analog power supply design principles:
-
-### A. Bandgap Reference Voltage ($\mathbf{V_{ref}}$ Derivation & Thermal Compensation)
-
-#### 1. Biasing & Core Topology
-Red LED $\mathbf{D_1}$ is used as the reference diode in order to drive a constant current generator (PNP transistor $\mathbf{Q_7}$ biased by $\mathbf{R_1 = 330\,\Omega}$, $\mathbf{R_2 = 330\,\Omega}$, $\mathbf{R_3 = 1.0\text{ k}\Omega}$, and bypass capacitor $\mathbf{C_1 = 47\,\mu\text{F}}$) that feeds the reference core. Forward-biased GaAsP red LEDs exhibit a negative forward voltage temperature coefficient ($\mathbf{\approx -2.0\text{ mV/}^\circ\text{C}}$), providing complementary thermal tracking.
-
-The reference core consists of transistors $\mathbf{Q_1, Q_2, Q_3}$ and resistors $\mathbf{R_5 = 1.0\text{ k}\Omega}$, $\mathbf{R_6 = 10.0\text{ k}\Omega}$, $\mathbf{R_7 = 470\,\Omega}$:
-- **Diode-connected $\mathbf{Q_2}$**: carries current $\mathbf{I_1}$ through collector resistor $\mathbf{R_5}$;
-- **Degenerated $\mathbf{Q_1}$**: carries current $\mathbf{I_2}$ through collector resistor $\mathbf{R_6}$, with emitter degeneration resistor $\mathbf{R_7}$;
-- **Feedback $\mathbf{Q_3}$**: base driven by the collector of $\mathbf{Q_1}$, emitter grounded, and collector tied to node $\mathbf{V_{ref}}$.
-
-#### 2. Analytical Derivation
-Neglecting base currents ($\mathbf{I_2 \approx I_{C(Q1)} \approx I_{E(Q1)}}$), the difference in base-emitter voltages appears directly across emitter degeneration resistor $\mathbf{R_7}$:
-
-$$\mathbf{V_{BE(Q2)} - V_{BE(Q1)} = I_{E(Q1)} R_7 \cong I_2 R_7}$$
-
-Using the fundamental BJT exponential relationship $\mathbf{I_C = I_S e^{V_{BE}/V_T} \implies V_{BE} = V_T \ln(I_C / I_S)}$, with thermal voltage $\mathbf{V_T = \frac{kT}{q} \approx 25.86\text{ mV}}$ (at $\mathbf{T = 300\text{ K}}$):
-
-$$\mathbf{V_{BE(Q2)} - V_{BE(Q1)} = \frac{kT}{q} \left[ \ln\left(\frac{I_{C(Q2)}}{I_S}\right) - \ln\left(\frac{I_{C(Q1)}}{I_S}\right) \right] = \frac{kT}{q} \ln\left(\frac{I_1}{I_2}\right) = I_2 R_7}$$
-
-Because $\mathbf{V_{BE(Q2)} \approx V_{BE(Q3)}}$, the voltage drops across the two collector load resistors balance ($\mathbf{I_1 R_5 \approx I_2 R_6 \implies \frac{I_1}{I_2} \approx \frac{R_6}{R_5}}$). Solving for the Proportional To Absolute Temperature (PTAT) current $\mathbf{I_2}$:
-
-$$\mathbf{I_2 = \frac{1}{R_7} \frac{kT}{q} \ln\left(\frac{R_6}{R_5}\right)}$$
-
-The reference voltage at node $\mathbf{V_{ref}}$ is taken at the collector of feedback transistor $\mathbf{Q_3}$:
-
-$$\mathbf{V_{ref} = I_2 R_6 + V_{BE(Q3)} = V_{BE(Q3)} + \frac{R_6}{R_7} \frac{kT}{q} \ln\left(\frac{R_6}{R_5}\right)}$$
-
-#### 3. Numerical Evaluation
-Substituting circuit component values ($\mathbf{R_5 = 1.0\text{ k}\Omega}$, $\mathbf{R_6 = 10.0\text{ k}\Omega}$, $\mathbf{R_7 = 470\,\Omega}$, $\mathbf{V_T \approx 25.86\text{ mV}}$, and $\mathbf{V_{BE(Q3)} \approx 0.65\text{ V}}$):
-
-$$\mathbf{\frac{R_6}{R_5} = \frac{10\text{ k}\Omega}{1.0\text{ k}\Omega} = 10 \implies \ln(10) \approx 2.303, \qquad \frac{R_6}{R_7} = \frac{10\,000\,\Omega}{470\,\Omega} \approx 21.28}$$
-
-$$\mathbf{V_{ref} \approx 0.65\text{ V} + 21.28 \times 25.86\text{ mV} \times 2.303 \approx 0.65\text{ V} + 1.267\text{ V} \approx 1.92\text{ V}}$$
-
-#### 4. Thermal Drift Compensation
-The temperature variation of the reference voltage is expressed as:
-
-$$\mathbf{\Delta V_{ref} = \Delta V_{BE(Q3)} + \frac{R_6}{R_7} \frac{k\,\Delta T}{q} \ln\left(\frac{R_6}{R_5}\right)}$$
-
-The negative temperature coefficient of $\mathbf{V_{BE(Q3)}}$ ($\mathbf{\approx -2.2\text{ mV/}^\circ\text{C}}$) is compensated by the positive temperature coefficient of the PTAT voltage term, minimizing thermal drift across temperature.
-
-Since the circuit includes foldback short-circuit protection but no overvoltage clamp (for design simplicity), it is strongly recommended not to exceed $\mathbf{+10\text{ V}}$ DC supply to protect the components.
-
-
-
-### B. Closed-Loop Output Voltage Scaling
-
-The feedback divider formed by $\mathbf{R_{10} = 1.0\text{ k}\Omega}$ and $\mathbf{R_{11} = 2.0\text{ k}\Omega}$ compares the output voltage against the error amplifier base-emitter junction and reference voltage ($\mathbf{V_{BE(Q5)} + V_{ref}}$):
-
-$$\mathbf{V_{\text{feedback}} = V_O \cdot \frac{R_{11}}{R_{10} + R_{11}} = V_O \cdot \frac{2.0\text{ k}\Omega}{1.0\text{ k}\Omega + 2.0\text{ k}\Omega} = \frac{2}{3} V_O \equiv V_{BE(Q5)} + V_{ref}}$$
-
-$$\mathbf{V_{O,\text{ideal}} = (V_{BE(Q5)} + V_{ref}) \cdot \left( 1 + \frac{R_{10}}{R_{11}} \right) = 1.5 \cdot (V_{BE(Q5)} + V_{ref})}$$
-
-Using $\mathbf{V_{ref} \approx 1.92\text{ V}}$ calculated above and nominal $\mathbf{V_{BE(Q5)} \approx 0.65\text{ V}}$:
-
-$$\mathbf{V_{O,\text{ideal}} = 1.5 \cdot (0.65\text{ V} + 1.92\text{ V}) = 1.5 \cdot 2.57\text{ V} \approx 3.86\text{ V}}$$
-
-
-
-### C. Loop Stability & Miller Compensation
-
-To guarantee unconditional stability under reactive loads, capacitor $\mathbf{C_5 = 1.0\text{ nF}}$ is placed across the collector-base junction of pass driver $\mathbf{Q_5}$. Via the Miller effect, the equivalent capacitance seen at the driver base is multiplied by the stage voltage gain:
-
-$$\mathbf{C_{\text{Miller}} = C_5 \cdot (1 + |A_v|)}$$
-
-This creates a dominant low-frequency pole, rolling off loop gain well before parasitic phase shifts from the series pass transistor $\mathbf{Q_4}$ and output decoupling capacitors can degrade phase margin, ensuring a stable power supply and preventing potential oscillations.
-
-
-### D. Foldback Current Limiting
-
-Resistor $\mathbf{R_{sense} = 10\,\Omega}$ senses the load current $\mathbf{I_L}$ delivered by series pass transistor $\mathbf{Q_4}$. A resistive divider formed by $\mathbf{R_{F1} = R_{14} = 220\,\Omega}$ and $\mathbf{R_{F2} = R_{15} = 1.0\text{ k}\Omega}$ biases sense transistor $\mathbf{Q_6}$ (2N2222), whose emitter is tied to $\mathbf{V_O}$:
-
-$$\mathbf{V_{BE, Q6} = (V_O + I_L R_{sense}) \frac{R_{F2}}{R_{F1} + R_{F2}} - V_O}$$
-
-Imposing $\mathbf{V_{BE, Q6} = 0.6\text{ V}}$ at the activation threshold gives:
-
-$$\mathbf{0.6\text{ V} = (V_O + I_{th} R_{sense}) \frac{R_{F2}}{R_{F1} + R_{F2}} - V_O}$$
-
-Solving for the threshold current $\mathbf{I_{th}}$:
-
-$$\mathbf{I_{th} = \frac{0.6\text{ V}}{R_{sense}} \left( 1 + \frac{R_{F1}}{R_{F2}} \right) + \frac{V_O}{R_{sense}} \left( \frac{R_{F1}}{R_{F2}} \right)}$$
-
-Under dead short-circuit conditions ($\mathbf{V_O = 0\text{ V}}$), the output current folds back to:
-
-$$\mathbf{I_{sc} = \frac{0.6\text{ V}}{R_{sense}} \left( 1 + \frac{R_{F1}}{R_{F2}} \right) = \frac{0.6\text{ V}}{10\,\Omega} \left( 1 + \frac{220\,\Omega}{1000\,\Omega} \right) = 73.2\text{ mA}}$$
-
-Substituting $\mathbf{V_{O,\text{ideal}} \approx 3.86\text{ V}}$ obtained from the bandgap reference and closed-loop scaling equations, the current threshold before regulation drop is:
-
-$$\mathbf{I_{th} = 73.2\text{ mA} + \frac{3.86\text{ V}}{10\,\Omega} \left( \frac{220\,\Omega}{1000\,\Omega} \right) = 73.2\text{ mA} + 84.9\text{ mA} \approx 158.1\text{ mA}}$$
-
-When load current exceeds $\mathbf{I_{th}}$, $\mathbf{Q_6}$ conducts and shunts base drive current away from driver $\mathbf{Q_5}$ and series pass $\mathbf{Q_4}$, folding back the output current from $\mathbf{I_{th} \approx 158.1\text{ mA}}$ down to $\mathbf{I_{sc} \approx 73.2\text{ mA}}$. This limits the maximum short-circuit power dissipation to:
-
-$$\mathbf{P_{diss,\max} = V_{IN} \cdot I_{sc} = 5.0\text{ V} \times 73.2\text{ mA} \approx 366\text{ mW}}$$
-
-protecting the series pass transistor from thermal runaway.
+The discrete regulator topology was sized and analyzed according to classical analog power supply design principles: see [filter/README.md](filter/README.md#discrete-power-supply-design--analysis) for the complete analytical derivations (bandgap reference voltage $\mathbf{V_{ref}}$ and thermal compensation, closed-loop output scaling, Miller compensation, and foldback current limiting).
 
 
 ## FPGA DDS & Frequency Generation
@@ -256,6 +172,8 @@ With $M = 1\,803\,886$, the effective output frequency is $999.99985\text{ Hz}$ 
 
 
 ## Measurement Methodology
+
+The measurement pipeline operates bidirectionally: test frequency is selected from LabVIEW and transmitted via UART to the STM32 Nucleo, which bridges the command via SPI to the Spartan-7 FPGA to update the DDS tuning word in real time before triggering coherent ADC acquisition.
 
 ### Coherent Sampling
 
@@ -288,7 +206,7 @@ $$\mathrm{ENOB} = \frac{\mathrm{SINAD} - 1.76}{6.02} \quad [\mathrm{bit}]$$
 
 where:
 - $V_{fund}$: RMS amplitude of the fundamental at $f_{sig}$;
-- $V_{noise,\mathrm{rms}}$: RMS noise floor, excluding the fundamental and extracted harmonics (removing DC, fundamental, and 3 bins per harmonic);
+- $V_{noise,\mathrm{rms}}$: Total broadband RMS noise floor, integrated via Parseval's theorem (Root-Sum-Square) over the non-signal bins, excluding the fundamental and extracted harmonics (removing DC, fundamental, and 3 bins per harmonic);
 - $V_{spur,\mathrm{max}}$: RMS amplitude of the largest spurious component;
 - $V_{h}$: RMS amplitude of the $h$-th harmonic, $h = 2 \dots N$.
 
@@ -301,65 +219,53 @@ All metrics refer to the **complete signal chain**: DAC7311 + Filter Subsystem +
 
 | $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
 |:---:|:---:|:---:|:--:|:---:|:---:|:---:|
-| 5000 | 1 | 71.4870 | 60.2496 | 44.4503 | −52.3189 | 7.0914 |
-| 2500 | 2 | 68.4055 | 57.1823 | 42.9522 | −46.6650 | 6.8426 |
-| 1250 | 4 | 65.8103 | 55.2023 | 38.7729 | −40.5015 | 6.1483 |
-| 625  | 8 | 61.1062 | 50.9321 | 31.1176 | −31.4076 | 4.8767 |
+| 5000 | 1 | 42.6870 | 54.5340 | 40.6990 | −52.7370 | 6.4680 |
+| 2500 | 2 | 43.1590 | 49.0060 | 40.4000 | −46.9600 | 6.4190 |
+| 1250 | 4 | 41.8920 | 44.6280 | 37.1540 | −40.3040 | 5.8790 |
+| 625  | 8 | 43.0420 | 36.3770 | 30.6040 | −31.2060 | 4.7910 |
 
 ### 2. Enhanced Performance: 4th-Order Active Sallen-Key Filter & Discrete PSU
 
 | $N$ | $f_{sig}$ (kHz) | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) |
 |:---:|:---:|:---:|:--:|:---:|:---:|:---:|
-| 5000 | 1 | **83.6998** | **71.8452** | **50.6740** | **−57.1476** | **8.1253** |
-| 2500 | 2 | **80.2193** | **67.4081** | **50.5249** | **−53.0489** | **8.1005** |
-| 1250 | 4 | **76.5753** | **62.8830** | **47.9556** | **−48.5245** | **7.6737** |
-| 625  | 8 | **73.1251** | **62.3415** | **42.7538** | **−42.8655** | **6.8096** |
-
-### 3. Side-by-Side Comparison: Passive RC vs. Active Sallen-Key Filter
-
-| $f_{sig}$ | Record $N$ | Configuration | SNR (dB) | SFDR (dB) | SINAD (dB) | THD (dB) | ENOB (bit) | $\Delta\text{ENOB}$ |
-|:--:|:--:|:--|:---:|:---:|:---:|:--:|:--:|:--:|
-| **1 kHz** | 5000 | Passive RC | 71.49 | 60.25 | 44.45 | −52.32 | 7.09 | - |
-| | | **Active 4th-Order** | **83.70** | **71.85** | **50.67** | **−57.15** | **8.13** | **+1.04 bit** |
-| **2 kHz** | 2500 | Passive RC | 68.41 | 57.18 | 42.95 | −46.67 | 6.84 | - |
-| | | **Active 4th-Order** | **80.22** | **67.41** | **50.52** | **−53.05** | **8.10** | **+1.26 bit** |
-| **4 kHz** | 1250 | Passive RC | 65.81 | 55.20 | 38.77 | −40.50 | 6.15 | - |
-| | | **Active 4th-Order** | **76.58** | **62.88** | **47.96** | **−48.52** | **7.67** | **+1.52 bit** |
-| **8 kHz** | 625 | Passive RC | 61.11 | 50.93 | 31.12 | −31.41 | 4.88 | - |
-| | | **Active 4th-Order** | **73.13** | **62.34** | **42.75** | **−42.87** | **6.81** | **+1.93 bit** |
-
-### LabVIEW Spectral Analysis Front Panel (Active Filter)
-
-![LabVIEW Spectral Analysis Front Panel](img/labview_1khz_active.png)
-
-*LabVIEW dynamic parameter characterization (coherent acquisition record) with the 4th-order active filter and discrete linear regulator.*
+| 5000 | 1 | **52.6060** | **58.4900** | **48.2820** | **−57.0780** | **7.7280** |
+| 2500 | 2 | **52.7490** | **54.2650** | **48.4530** | **−52.9190** | **7.7560** |
+| 1250 | 4 | **50.8340** | **48.5110** | **45.7280** | **−47.9480** | **7.3040** |
+| 625  | 8 | **52.4230** | **42.9030** | **42.2110** | **−42.7230** | **6.7190** |
 
 
 ## Known Limitations & System Interpretation
 
-- **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally operated at 8-bit resolution in an attempt to characterize its baseline performance. With the 4th-order active filter and clean discrete linear PSU, the measured ENOB at $1\text{ kHz}$ reaches $8.13\text{ bits}$, demonstrating that the signal chain preserves the full theoretical resolution of the DAC. The main issue lies in the fact that in order to correctly evaluate the contribution in the degradation of the performance of the whole system we'd need a golden standard to actually understand to what extent the loss in performance with frequency is related to the DAC. It would be key to first characterize every component of the pipeline with a strong reference; yet it's very likely that the bottleneck of the system is indeed the DAC. 
-- **Frequency-Dependent Roll-Off & Phase Increment**: At higher frequencies ($8\text{ kHz}$), the DDS phase step increases, exciting higher-frequency quantization steps. The steep $-80\text{ dB/decade}$ roll-off of the active filter maintains ENOB at $6.81\text{ bits}$, whereas the passive filter degraded to $4.88\text{ bits}$.
+- **8-bit DAC Resolution and ADC Bottleneck**: The DAC was intentionally operated at 8-bit resolution in an attempt to characterize its baseline performance. Following the fix of a previous conceptual error in the noise RMS computation, the measured SNR ($\approx 52.6\text{–}52.7\text{ dB}$) now possesses sound physical meaning and is likely limited by the 8-bit DAC baseline resolution (theoretical full-scale SNR $\approx 49.92\text{ dB}$). With the 4th-order active filter and clean discrete linear PSU, the measured ENOB at $1\text{ kHz}$ reaches $7.73\text{ bits}$, demonstrating that the signal chain preserves nearly the full theoretical resolution of the DAC. The main issue lies in the fact that in order to correctly evaluate the contribution in the degradation of the performance of the whole system we'd need a golden standard to actually understand to what extent the loss in performance with frequency is related to the DAC. It would be key to first characterize every component of the pipeline with a strong reference; yet it's very likely that the bottleneck of the system is indeed the DAC. 
+- **Frequency-Dependent Roll-Off & Phase Increment**: At higher frequencies ($8\text{ kHz}$), the DDS phase step increases, exciting higher-frequency quantization steps. The steep $-80\text{ dB/decade}$ roll-off of the active filter maintains ENOB at $6.72\text{ bits}$, whereas the passive filter degraded to $4.79\text{ bits}$.
 - **Solid Ground Plane & Layout Integrity**: The 100% continuous solid ground plane on `B.Cu` with zero routing breaks eliminates ground loop currents between the FPGA, DAC, and ADC.
 
 
 ## To Do
 
-- **Full Measurement Pipeline Automation**: Fully automate the end-to-end characterization pipeline directly from LabVIEW by establishing bidirectional communication from the host PC through the STM32 Nucleo to the Spartan-7 FPGA, allowing dynamic run-time frequency selection (1 kHz, 2 kHz, 4 kHz, 8 kHz), automatic record acquisition, and hands-free sweep computation of dynamic metrics.
+- ✅ **(DONE)** **Full Measurement Pipeline Automation**: Fully automate the end-to-end characterization pipeline directly from LabVIEW by establishing bidirectional communication from the host PC through the STM32 Nucleo to the Spartan-7 FPGA, allowing dynamic run-time frequency selection, automatic record acquisition, and hands-free sweep computation of dynamic metrics. Implemented via USART2 RX interrupt on STM32, SPI1 master to Spartan-7 SPI slave, firmware DMA re-arming, and automated LabVIEW sweep VI.
 
 
 ## Repository Structure
 
 ```
 ├── README.md                     # Main pipeline documentation
+├── LICENSE                       # MIT License (Software & Firmware)
+├── LICENSE-HARDWARE              # CERN-OHL-P-2.0 License (Hardware designs)
 ├── docs/                         # Datasheets, manuals, IEEE standards
-├── firmware/                     # Bare-metal STM32C031 firmware (ADC, DMA, EXTI, UART)
-├── VHDL/                         # Spartan-7 FPGA design (DDS, 500 kHz trigger, DAC driver)
-├── labview/                      # VISA host receiver and analysis VI
+│   └── references.md             # External documentation and reference links
+├── firmware/                     # Bare-metal STM32C031 firmware (ADC, DMA, SPI, UART)
+│   └── DMA_nucleoC03_ADC/        # STM32CubeIDE project with register-level C drivers
+├── VHDL/                         # Spartan-7 FPGA design (DDS, SPI slave, 500 kHz trigger)
+│   └── DAConSEA.srcs/            # Vivado project source, constraints, testbench
+├── labview/                      # VISA host receiver and automated sweep VI
 ├── data/                         # Waveform generator and LUT synthesis scripts
 ├── filter/                       # Analog front-end & discrete PSU hardware
+│   ├── README.md                 # Filter & discrete power supply analytical design
+│   ├── BOM_filter.csv            # Bill of Materials (KiCad export)
 │   ├── pcb/                      # KiCad project, schematic (.kicad_sch), and layout (.kicad_pcb)
 │   └── simulation/               # LTspice circuit (.asc), MCP6021 model (.lib), and PWL stimulus files
-└──├── img/                          # Schematics, 3D PCB renders, test bench photos, and scope captures
+└── img/                          # Schematics, 3D PCB renders, test bench photos, and scope captures
 ```
 
 
@@ -369,7 +275,7 @@ All metrics refer to the **complete signal chain**: DAC7311 + Filter Subsystem +
 
 - STM32 Nucleo-C031C6 development board;
 - Seeed Studio Spartan Edge Accelerator (SEA) board (Xilinx Spartan-7) with TI DAC7311;
-- **Active Filter & Discrete Linear Power Supply PCB** (2x Microchip MCP6021, 6x 2N2222, 1x 2N3906, 1x Red LED, resistors, electrolytic and ceramic capacitors (see BOM)).
+- **Active Filter & Discrete Linear Power Supply PCB** (2x Microchip MCP6021, 6x 2N2222, 1x 2N3906, 1x Red LED, resistors, electrolytic and ceramic capacitors; see [BOM](filter/BOM_filter.csv)).
 - Passive 1st-order RC reconstruction filter ($68.75\,\Omega$, $100\text{ nF}$) for baseline comparison;
 - Regulated DC Power Supply (+5.0 V DC or +7.0 V to +12.0 V DC);
 - Oscilloscope (for live signal probing);
@@ -399,13 +305,16 @@ cd fpga-mcu-dac-adc-conversion-pipeline
 3. **Hardware Interconnect**:
    - Connect DAC7311 output from SEA board to `VDAC1` on the Active Filter PCB;
    - Connect `VOUT1` on the Active Filter PCB to Nucleo PA1 (`ADC_IN1`);
-   - Connect SEA 500 kHz trigger to Nucleo PA11 (`EXTI11`);
+   - Connect SEA 500 kHz trigger (`N14`) to Nucleo PA11 (`EXTI11`);
+   - Connect Nucleo PA6 (`CS`) to SEA `M14`;
+   - Connect Nucleo PA5 (`SCK`) to SEA `C4`;
+   - Connect Nucleo PA7 (`MOSI`) to SEA `B13`;
    - Ensure a common GND rail is shared across all three boards;
    - Power the Active Filter PCB via `VCC1` (+5.0 V DC).
 4. **Host Spectral Analysis**:
    - Open `labview/Dynamic_parameters_calculator.vi` in LabVIEW;
-   - Select the Nucleo Virtual COM Port (115200 baud) and run the VI;
-   - Press the Nucleo `B1` reset button to trigger acquisition of 5000 samples and observe the FFT and IEEE 1241 metrics.
+   - Select the Nucleo Virtual COM Port (115200 baud);
+   - Run the automated sweep to step frequencies dynamically and observe FFT and IEEE 1241 metrics, or trigger single acquisitions.
 
 
 ## References
@@ -421,5 +330,8 @@ cd fpga-mcu-dac-adc-conversion-pipeline
 
 ## License
 
-This project is licensed under the **MIT License**. You are free to use, modify, and distribute this software in compliance with the license terms.
+This project is dual-licensed:
+
+- **Software & Firmware** (STM32 bare-metal C drivers, VHDL DDS architecture, LabVIEW VI, MATLAB scripts): licensed under the [MIT License](LICENSE).
+- **Hardware & PCB Designs** (`filter/` KiCad schematic, layout, and Bill of Materials): licensed under the [CERN Open Hardware Licence Version 2 - Permissive (CERN-OHL-P-2.0)](LICENSE-HARDWARE).
 

@@ -1,7 +1,7 @@
 #include "DMA.h"
 #include <stdint.h>
 
-extern uint16_t adc_buffer[5000];
+extern uint16_t adc_buffer[5001];
 
 void DMA_init(void) {
 
@@ -26,9 +26,12 @@ void DMA_init(void) {
 
     DMAMUX1_Channel0 -> CCR = (0x05U << 0);
 
-    // Configure the Number of Data to Transfer (NDT)
-    // Set to 5000 transfers. The DMA will treat this counter automatically.
-    DMA1_Channel1->CNDTR = 5000U;
+    /*
+     * Configure the Number of Data to Transfer (NDT)
+     * Set to 5001 transfers. The DMA will treat this counter automatically. Dummy sample
+     * used to make sure first sample does not create issues with measurements.
+    */
+    DMA1_Channel1->CNDTR = 5001U;
 
     //  Clear the entire Channel Configuration Register (CCR) for a clean state
     DMA1_Channel1->CCR = 0U;
@@ -65,3 +68,30 @@ void DMA_init(void) {
     //Finally, enable the DMA channel
     DMA1_Channel1->CCR |= DMA_CCR_EN;
 }
+
+
+// Re-arms the DMA channel for a new acquisition cycle
+void DMA_rearm(void)
+{
+    // Channel must be disabled to reload CNDTR
+    DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+
+    //refreshing ADC
+    (void)ADC1->DR;
+    ADC1->ISR |= ADC_ISR_EOC | ADC_ISR_EOS | ADC_ISR_OVR;
+
+
+    // Reload the 5001 transfers counter
+    DMA1_Channel1->CNDTR = 5001U;
+    // Re-enable the DMA channel
+    DMA1_Channel1->CCR |= DMA_CCR_EN;
+
+
+    //the rest stays the same, no config changes.
+
+}
+
+
+
+
+

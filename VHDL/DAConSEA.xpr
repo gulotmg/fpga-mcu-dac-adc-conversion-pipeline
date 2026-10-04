@@ -4,7 +4,7 @@
 <!-- Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.                   -->
 <!-- Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.   -->
 
-<Project Product="Vivado" Version="7" Minor="71" Path="C:/Users/gulot/Desktop/fpga-mcu-dac-adc-conversion-pipeline/VHDL/DAConSEA.xpr">
+<Project Product="Vivado" Version="7" Minor="71" Path="C:/Users/gulot/Desktop/fpga-mcu-dac-adc-conversion-pipeline-main/VHDL/DAConSEA.xpr">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="4acedaa7927946339508afc13365e8ec"/>

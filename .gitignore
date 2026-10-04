@@ -7,6 +7,7 @@
 *.hw/
 *.sim/
 *.ip_user_files/
+*.dcp
 
 # Vivado log and journal files
 vivado*.log
@@ -29,7 +30,7 @@ xsim.dir/
 !*.srcs/**
 
 # -------------------------------------------------------------------------
-# STM32CubeIDE Build Output (Firmware / Bare-Metal C)
+# STM32CubeIDE Build Output & IDE Metadata (Firmware / Bare-Metal C)
 # -------------------------------------------------------------------------
 Debug/
 Release/
@@ -41,6 +42,11 @@ Release/
 *.bin
 *.map
 *.hex
+.project
+.cproject
+.settings/
+*.launch
+
 
 # -------------------------------------------------------------------------
 # KiCad EDA Artifacts & Backups (PCB & Schematics)

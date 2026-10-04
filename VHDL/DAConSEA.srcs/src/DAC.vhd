@@ -14,14 +14,20 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity DAC is
     Port ( 
+    
         CLK              : in  STD_LOGIC; -- Global system clock (100 MHz)
         RESET            : in  STD_LOGIC; -- Active-low system reset
         SELECT1, SELECT2 : in  STD_LOGIC; -- Active-low pushbuttons (Frequency / Waveform)
+        MOSI             : in  STD_LOGIC;   -- MOSI data coming from MCU
+        SCLK             : in  STD_LOGIC;   -- SPI SCLK synchronising MCU data
+        CS               : in  STD_LOGIC:='1'; -- CS active low pin ('1' is low)
         DAC_DIN          : out STD_LOGIC; -- Serial data out to DAC
         DAC_CLK          : out STD_LOGIC; -- Serial clock to DAC
         DAC_SYNC         : out STD_LOGIC; -- Active-low frame synchronization
         INT_PIN          : out STD_LOGIC:='0'  -- FPGA_GPIO pin to generate interrupt for ADC
+
     );
+    
 end DAC;
 
 architecture myDACarch of DAC is
@@ -73,6 +79,7 @@ architecture myDACarch of DAC is
     -- 32-bit Phase Accumulator & Phase Increment (Tuning Word)
     signal phase_acc : unsigned(C_PHASE_ACC_WIDTH-1 downto 0) := (others => '0');
     signal phase_inc : unsigned(C_PHASE_ACC_WIDTH-1 downto 0) := C_PHASE_INC_1KHZ;
+    signal phase_chosen : unsigned(C_PHASE_ACC_WIDTH-1 downto 0) := C_PHASE_INC_1KHZ;
 
     -- Debounce counters and prescalers
     signal select1_counter, select2_counter, reset_counter : integer range 0 to C_DEBOUNCE_LIMIT-1 := 0; 
@@ -81,7 +88,7 @@ architecture myDACarch of DAC is
     signal int_counter                                     : integer range 0 to C_INT_BUFFER_LIMIT-1 := 0;
 
     -- Transmitter FSM
-    type state_type is (WAIT_FOR_SYNC, DATA_MOVING);
+    type state_type is (WAIT_FOR_SYNC, DATA_MOVING, PHASE_RECEIVE);
     signal state : state_type := WAIT_FOR_SYNC;
 
     -- ROM definition (256 samples)
@@ -146,7 +153,11 @@ architecture myDACarch of DAC is
      
     -- Current selected sample value
     signal selected_sample : integer range 0 to C_RAM_WIDTH-1 := 0;
+    
+    --SCLK rising_edge mask
+    signal SCLK_mask : std_logic_vector (1 downto 0):="00";
 
+    
 begin
 
     DAC_CONFIG_and_DATA: process(CLK)
@@ -173,7 +184,7 @@ begin
                     select2_counter  <= 0;
                     state            <= WAIT_FOR_SYNC;
                     phase_acc        <= (others => '0');
-                    phase_inc        <= C_PHASE_INC_1KHZ;
+                    phase_inc        <= phase_chosen; --phase defaults to last programmed value from LabVIEW
                     wave_mode        <= C_MODE_SINE;
                 end if;
                 reset_counter <= 0;
@@ -230,6 +241,11 @@ begin
                 INT_PIN     <= '1'; 
                 int_counter <= 0;
             end if;
+            
+            -- CS sensitivity at any moment. It acts as interrupt for every state of FSM
+            if (CS = '0') then 
+                state <= PHASE_RECEIVE; 
+            end if;
            
             -- Transmission State Machine
             case (state) is
@@ -270,6 +286,23 @@ begin
                             
                         end if;  
                     end if;
+                
+                when PHASE_RECEIVE =>
+                
+                    if (SCLK_mask = "01") then        
+                        --implies there has been a rising_edge of SCLK_mask "sampled" at CLK of FPGA
+                        phase_inc(31 downto 0) <= phase_inc(30 downto 0) & MOSI;
+                        SCLK_mask <= SCLK_mask(0) & SCLK;
+                    else 
+                        SCLK_mask <= SCLK_mask(0) & SCLK;
+                    end if;
+                    
+                    if (CS = '1') then 
+                        state <= WAIT_FOR_SYNC;
+                        phase_chosen <= phase_inc; 
+                        phase_acc <= (others => '0');
+                    end if;
+
             end case;
         end if;
     end process;
