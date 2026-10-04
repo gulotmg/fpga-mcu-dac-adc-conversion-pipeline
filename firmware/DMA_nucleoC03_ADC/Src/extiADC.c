@@ -20,3 +20,5 @@ void extiADC_init(void)
     /* Unmask Event and Interrupt generation for INTERNAL routing (not through ISR) */
     EXTI->EMR1  |= (1U << 11);
 }
+
+
