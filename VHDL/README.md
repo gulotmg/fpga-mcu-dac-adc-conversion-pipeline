@@ -15,7 +15,7 @@ to reprogram the 32-bit phase increment accumulator at runtime for automated fre
 |---|---|---|
 | `CLK` | in | 100 MHz system clock |
 | `RESET` | in | Active-low, debounced (~20 ms) |
-| `SELECT1` | in | Active-low button: left-shifts `addr_mask` (x2 frequency step, wraps 128->1) |
+| `SELECT1` | in | Active-low button: doubles frequency step (`phase_inc`), wraps around >16 kHz |
 | `SELECT2` | in | Active-low button: cycles waveform mode |
 | `MOSI` | in | SPI data in from STM32 PA7 |
 | `SCLK` | in | SPI clock in from STM32 PA5 |
@@ -35,14 +35,15 @@ to reprogram the 32-bit phase increment accumulator at runtime for automated fre
   while the lower 24 bits accumulate the decimal phase step on each frame.
   The tuning word for 1000 Hz is $M = 1\,803\,886$.
 - **Runtime SPI frequency configuration** : 3-state FSM (`WAIT_FOR_SYNC`, `DATA_MOVING`, `PHASE_RECEIVE`).
-  When `CS = '0'`, the FSM immediately switches to `PHASE_RECEIVE`.
-  `SCLK` edges are detected by sampling through a 2-bit shift register (`SCLK_mask`) at 100 MHz.
-  Each rising edge shifts `MOSI` into `phase_inc(31 downto 0)`.
+  SPI inputs (`CS`, `SCLK`, `MOSI`) are synchronized to the 100 MHz clock domain through 2-FF CDC
+  synchronizers with `ASYNC_REG = "TRUE"` constraints to prevent SRL inference and enforce slice co-location.
+  `SCLK` rising edges are detected via a 3-bit shift register (`SCLK_mask(2 downto 1) = "01"`).
+  When `CS = '0'`, the FSM immediately switches to `PHASE_RECEIVE` and shifts `MOSI` into `phase_inc(31 downto 0)`.
   When `CS = '1'`, `phase_chosen <= phase_inc` latches the word, `phase_acc` resets to 0 for phase alignment,
   and the FSM returns to `WAIT_FOR_SYNC`.
   On system reset, `phase_inc` defaults to `phase_chosen` to preserve host-configured frequency.
 - **Waveform select** : 2-bit mode counter incremented with 'SELECT2': `00` sine, `01` triangle,
-  `11` sawtooth; the unused state safely defaults to sine. 
+  `10` sawtooth; the unused state safely defaults to sine. 
 - **DAC7311 serial interface** : 16-bit shift frame at 50 MHz serial clock with inter-frame SYNC delay (in accordance to datasheet).
 - **500 kHz trigger** : simply achieved by a modulo-200 counter on the 100 MHz clock.
 - **Reset / buttons** : ~20 ms counter-based debouncing; reset restores FSM,

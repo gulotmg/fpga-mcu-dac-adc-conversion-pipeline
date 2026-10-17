@@ -3,7 +3,7 @@
 -- Description: 
 --   Generates periodic waveforms using Block RAM lookup tables (ROM)
 --   and transmits samples via a 3-wire serial interface to a DAC7311.
---   - Interrupt generation: 100 kHz signal generated and output by an FPGA_GPIO pin
+--   - Interrupt generation: 500 kHz signal generated and output by an FPGA_GPIO pin
 --   - Frequency control: 32-bit Phase Accumulator DDS.
 --   - Waveform select: Cycles through Sine, Triangle, and Sawtooth.
 --------------------------------------------------------------------------------
@@ -154,15 +154,31 @@ architecture myDACarch of DAC is
     -- Current selected sample value
     signal selected_sample : integer range 0 to C_RAM_WIDTH-1 := 0;
     
-    --SCLK rising_edge mask
-    signal SCLK_mask : std_logic_vector (1 downto 0):="00";
-
+    --spi masks to avoid potential CDC
+    signal SCLK_mask : std_logic_vector (2 downto 0):="111";
+    signal CS_mask   : std_logic_vector (1 downto 0):="11";
+    signal MOSI_mask : std_logic_vector (1 downto 0):="00";
+    
+    
+    --this allows to prevent optimisation and ensures the SPI FF are on the same slice thus avoiding long pathways
+    attribute ASYNC_REG : string;
+    attribute ASYNC_REG of SCLK_mask : signal is "TRUE";
+    attribute ASYNC_REG of CS_mask   : signal is "TRUE";
+    attribute ASYNC_REG of MOSI_mask : signal is "TRUE";
+    
     
 begin
 
     DAC_CONFIG_and_DATA: process(CLK)
     begin
         if rising_edge(CLK) then
+            
+            --shift registers of SPI datapath: this allows to synchronize with FPGA main clock 
+            CS_mask   <= CS_mask(0) & CS; 
+            SCLK_mask <= SCLK_mask(1 downto 0) & SCLK; 
+            MOSI_mask <= MOSI_mask(0) & MOSI;
+                        
+             
             -- Generate 50 MHz DAC serial clock using a shift ring
             DAC_CLK <= DAC_clk_mask(0);
             DAC_clk_mask(1 downto 0) <= DAC_clk_mask(0) & DAC_clk_mask(1);
@@ -241,11 +257,7 @@ begin
                 INT_PIN     <= '1'; 
                 int_counter <= 0;
             end if;
-            
-            -- CS sensitivity at any moment. It acts as interrupt for every state of FSM
-            if (CS = '0') then 
-                state <= PHASE_RECEIVE; 
-            end if;
+           
            
             -- Transmission State Machine
             case (state) is
@@ -262,6 +274,7 @@ begin
                     end if;
                 
                 when DATA_MOVING =>
+                
                     buffer_t9 <= 0;
                     -- Update serial data line on clock high
                     if (DAC_clk_mask(0) = '1') then
@@ -286,24 +299,29 @@ begin
                             
                         end if;  
                     end if;
+             
                 
                 when PHASE_RECEIVE =>
                 
-                    if (SCLK_mask = "01") then        
+                    if (SCLK_mask(2 downto 1) = "01") then        
                         --implies there has been a rising_edge of SCLK_mask "sampled" at CLK of FPGA
-                        phase_inc(31 downto 0) <= phase_inc(30 downto 0) & MOSI;
-                        SCLK_mask <= SCLK_mask(0) & SCLK;
-                    else 
-                        SCLK_mask <= SCLK_mask(0) & SCLK;
+                        phase_inc(31 downto 0) <= phase_inc(30 downto 0) & MOSI_mask(1);
                     end if;
                     
-                    if (CS = '1') then 
+                    if (CS_mask(1) = '1') then 
                         state <= WAIT_FOR_SYNC;
                         phase_chosen <= phase_inc; 
                         phase_acc <= (others => '0');
                     end if;
 
             end case;
+            
+        -- CS sensitivity at any moment. It acts as interrupt for every state of FSM
+        -- this code is put at last so it's the last assignment in case of contention 
+            if (CS_mask(1) = '0') then 
+                DAC_SYNC <= '1'; DAC_data_counter <= 0;
+                state <= PHASE_RECEIVE; 
+            end if;
         end if;
     end process;
 

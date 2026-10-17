@@ -31,7 +31,7 @@ void spi1_config(void)
     RCC->APBENR2 |= RCC_APBENR2_SPI1EN;
 
     // CR1: Simplex Transmit-Only (BIDIMODE=1, BIDIOE=1) on MOSI
-    // Master mode, Software NSS (SSM=1, SSI=1), CPOL=1, CPHA=1, Baud = f_PCLK/4 (BR=001)
+    // Master mode, Software NSS (SSM=1, SSI=1), CPOL=1, CPHA=1, Baud = f_PCLK/64 (BR=101, 750 kHz)
 
 
     SPI1->CR1 = SPI_CR1_BIDIMODE | SPI_CR1_BIDIOE | (0x05UL << SPI_CR1_BR_Pos)|
