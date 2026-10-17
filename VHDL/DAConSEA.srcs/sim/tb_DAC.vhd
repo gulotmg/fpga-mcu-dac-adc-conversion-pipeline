@@ -13,6 +13,9 @@ architecture tb of tb_DAC is
     signal RESET    : std_logic := '1';
     signal SELECT1  : std_logic := '0';
     signal SELECT2  : std_logic := '0';
+    signal MOSI     : std_logic;
+    signal SCLK     : std_logic;
+    signal CS       : std_logic := '1';
     signal DAC_DIN  : std_logic;
     signal DAC_CLK  : std_logic;
     signal DAC_SYNC : std_logic;
@@ -34,7 +37,10 @@ begin
         DAC_DIN  => DAC_DIN,
         DAC_CLK  => DAC_CLK,
         DAC_SYNC => DAC_SYNC,
-        INT_PIN  => INT_PIN
+        INT_PIN  => INT_PIN,
+        MOSI     => MOSI,
+        SCLK     => SCLK,
+        CS       => CS
     );
 
     clock_generation : process

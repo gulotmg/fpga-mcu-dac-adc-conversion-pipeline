@@ -318,7 +318,7 @@ cd fpga-mcu-dac-adc-conversion-pipeline
    - Ensure a common GND rail is shared across all three boards;
    - Power the Active Filter PCB via `VCC1` (+5.0 V DC).
 4. **Host Spectral Analysis**:
-   - Open `labview/Dynamic_parameters_calculator.vi` in LabVIEW;
+   - Open `labview/Dynamic_parameters_calculator_IEEE.vi` in LabVIEW;
    - Select the Nucleo Virtual COM Port (115200 baud);
    - Run the automated sweep to step frequencies dynamically and observe FFT and IEEE 1241 metrics, or trigger single acquisitions.
 
